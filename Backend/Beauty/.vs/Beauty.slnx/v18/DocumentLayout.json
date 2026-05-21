@@ -1,0 +1,231 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "E:\\Beauty_Project\\Backend\\Beauty\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\employeescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\employeescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\emploee.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\emploee.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\servicescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\servicescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\businessescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\businessescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\clientscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\clientscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\beautysaloncontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\beautysaloncontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\business.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\business.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\service.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\service.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\recordingscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\recordingscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\client.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\client.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UserSecrets\\69eba75b-a20a-4654-9b3d-eb0ffb5ffe24\\secrets.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 8,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Beauty\\Controllers\\AuthController.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Beauty\\Controllers\\AuthController.cs",
+              "ViewState": "AgIAAMAAAAAAAAAAAAAUwM0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T18:25:21.492Z",
+              "IsPinned": true
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Emploee.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Emploee.cs",
+              "RelativeDocumentMoniker": "Beauty\\Models\\Emploee.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Emploee.cs",
+              "RelativeToolTip": "Beauty\\Models\\Emploee.cs",
+              "ViewState": "AgIAABEAAAAAAAAAAAAIwCUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-21T19:14:47.658Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "BeautySalonContext.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\BeautySalonContext.cs",
+              "RelativeDocumentMoniker": "Beauty\\Models\\BeautySalonContext.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\BeautySalonContext.cs",
+              "RelativeToolTip": "Beauty\\Models\\BeautySalonContext.cs",
+              "ViewState": "AgIAAHoAAAAAAAAAAAAUwI8AAAA/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-18T19:30:54.061Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "Service.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Service.cs",
+              "RelativeDocumentMoniker": "Beauty\\Models\\Service.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Service.cs",
+              "RelativeToolTip": "Beauty\\Models\\Service.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAwwB0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-18T19:26:23.224Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "Business.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Business.cs",
+              "RelativeDocumentMoniker": "Beauty\\Models\\Business.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Business.cs",
+              "RelativeToolTip": "Beauty\\Models\\Business.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAA2wCwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-18T18:11:06.358Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ClientsController.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ClientsController.cs",
+              "RelativeDocumentMoniker": "Beauty\\Controllers\\ClientsController.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ClientsController.cs",
+              "RelativeToolTip": "Beauty\\Controllers\\ClientsController.cs",
+              "ViewState": "AgIAAJsAAAAAAAAAAAAiwMAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-12T19:58:23.899Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "Client.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Client.cs",
+              "RelativeDocumentMoniker": "Beauty\\Models\\Client.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Client.cs",
+              "RelativeToolTip": "Beauty\\Models\\Client.cs",
+              "ViewState": "AgIAAAEAAAAAAAAAAAAowB4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-12T19:55:24.873Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "BusinessesController.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\BusinessesController.cs",
+              "RelativeDocumentMoniker": "Beauty\\Controllers\\BusinessesController.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\BusinessesController.cs",
+              "RelativeToolTip": "Beauty\\Controllers\\BusinessesController.cs",
+              "ViewState": "AgIAANkAAAAAAAAAAAAiwPwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-12T17:41:40.612Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "EmployeesController.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\EmployeesController.cs",
+              "RelativeDocumentMoniker": "Beauty\\Controllers\\EmployeesController.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\EmployeesController.cs",
+              "RelativeToolTip": "Beauty\\Controllers\\EmployeesController.cs",
+              "ViewState": "AgIAADMAAAAAAAAAAAAiwFYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-12T17:41:27.733Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Program.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Program.cs",
+              "RelativeDocumentMoniker": "Beauty\\Program.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Program.cs",
+              "RelativeToolTip": "Beauty\\Program.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAiwCEAAAAtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-25T18:23:00.566Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "ServicesController.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ServicesController.cs",
+              "RelativeDocumentMoniker": "Beauty\\Controllers\\ServicesController.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ServicesController.cs",
+              "RelativeToolTip": "Beauty\\Controllers\\ServicesController.cs",
+              "ViewState": "AgIAAFgAAAAAAAAAAAAiwHsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T18:49:08.593Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "RecordingsController.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\RecordingsController.cs",
+              "RelativeDocumentMoniker": "Beauty\\Controllers\\RecordingsController.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\RecordingsController.cs",
+              "RelativeToolTip": "Beauty\\Controllers\\RecordingsController.cs",
+              "ViewState": "AgIAANkAAAAAAAAAAAAAwPwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-02T16:15:32.033Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "secrets.json",
+              "DocumentMoniker": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UserSecrets\\69eba75b-a20a-4654-9b3d-eb0ffb5ffe24\\secrets.json",
+              "ToolTip": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UserSecrets\\69eba75b-a20a-4654-9b3d-eb0ffb5ffe24\\secrets.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAADAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-04-25T17:57:28.515Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
