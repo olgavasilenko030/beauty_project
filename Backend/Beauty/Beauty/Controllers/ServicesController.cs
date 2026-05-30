@@ -22,24 +22,39 @@ namespace Beauty.Controllers
         }
 
         // GET: api/Services
+        // GET: api/Services или api/Services?employeeId=5 или api/Services?businessId=1
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Service>>> GetServices(int? businessId, int? employeeId)
+        [Authorize] // Защищаем эндпоинт авторизацией
+        public async Task<ActionResult<IEnumerable<object>>> GetServices([FromQuery] int? businessId, [FromQuery] int? employeeId)
         {
             var query = _context.Services.AsQueryable();
 
-            // Фильтр по мастеру (для записи к конкретному человеку)
+            // 1. Фильтр по мастеру (для записи к конкретному человеку)
             if (employeeId.HasValue)
             {
-                query = query.Where(s => s.EmploeeId == employeeId);
+                query = query.Where(s => s.EmploeeId == employeeId.Value);
             }
-            // Фильтр по бизнесу (общий прайс салона)
+            // 2. Фильтр по бизнесу (общий прайс салона)
             else if (businessId.HasValue)
             {
-                query = query.Where(s => s.BusinessId == businessId);
+                query = query.Where(s => s.BusinessId == businessId.Value);
             }
 
-            return await query.ToListAsync();
+            // 3. ИСПРАВЛЕНО: Формируем плоский JSON (DTO) без циклических ссылок и отдаем фронтенду
+            var result = await query.Select(s => new
+            {
+                s.Id,
+                s.Name,
+                s.Price,
+                // Переводим TimeSpan длительности в понятную для JS строку формата "ЧЧ:мм"
+                Duration = s.Duration.ToString(@"hh\:mm"),
+                s.EmploeeId,
+                s.BusinessId
+            }).ToListAsync();
+
+            return Ok(result);
         }
+
 
         // --- УЛУЧШЕНО: PUT с авторизацией и понятными ответами ---
         // PUT: api/Services/5

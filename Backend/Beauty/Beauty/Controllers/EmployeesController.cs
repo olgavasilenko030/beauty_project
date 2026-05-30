@@ -67,11 +67,12 @@ namespace Beauty.Controllers
                 e.Phone,
                 e.BusinessId,
                 portfolioPhotos = e.PortfolioPhotos,
-                // ИСПРАВЛЕНО: Теперь бэкенд принудительно вытягивает аватарку мастера из связанной таблицы Users
+                // ИСПРАВЛЕНО: Сначала ищем аватарку в аккаунте Users, а если его нет — берем резервный путь из Description
                 avatarUrl = _context.Users
-                    .Where(u => u.Role == "Master" && u.LinkedId == e.Id)
-                    .Select(u => u.AvatarUrl)
-                    .FirstOrDefault(),
+             .Where(u => u.Role == "Master" && u.LinkedId == e.Id)
+             .Select(u => u.AvatarUrl)
+             .FirstOrDefault() ?? e.Description ?? "",
+
                 // Вытягиваем дочерние услуги в camelCase без обратных ссылок на мастера
                 Services = e.Services.Select(s => new
                 {
@@ -150,26 +151,53 @@ namespace Beauty.Controllers
             return CreatedAtAction(nameof(GetEmploee), new { id = emploee.Id }, emploee);
         }
 
-        // DELETE: api/Employees/5
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Owner,Admin")]
-        public async Task<IActionResult> DeleteEmploee(int id)
+        // POST: api/Employees/upload-avatar/5
+        [HttpPost("upload-avatar/{id}")]
+        [Authorize]
+        public async Task<IActionResult> UploadAvatar(int id, IFormFile file)
         {
-            var emploee = await _context.Emploees.FindAsync(id);
-            if (emploee == null) return NotFound("Сотрудник не найден.");
+            var employee = await _context.Emploees.FindAsync(id);
+            if (employee == null) return NotFound("Сотрудник не найден в системе салона.");
 
-            // Проверяем, есть ли у мастера активные записи клиентов
-            bool hasRecordings = await _context.Recordings.AnyAsync(r => r.EmploeeId == id && r.Status != "Cancelled");
-            if (hasRecordings)
+            if (file == null || file.Length == 0) return BadRequest("Файл фотографии не выбран.");
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "avatars");
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"avatar-{id}-{Guid.NewGuid()}.jpg";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                return BadRequest("Нельзя удалить мастера, так как у него есть незавершенные записи клиентов.");
+                await file.CopyToAsync(stream);
             }
 
-            _context.Emploees.Remove(emploee);
-            await _context.SaveChangesAsync();
+            var avatarPath = $"/uploads/avatars/{fileName}";
 
-            return NoContent();
+            // 1. ALWAYS save it directly to the Employee description field as a reliable fallback
+            employee.Description = avatarPath;
+            _context.Entry(employee).State = EntityState.Modified;
+
+            // 2. ALSO save it to the Users credentials table IF an account was already generated
+            var userMaster = await _context.Users.FirstOrDefaultAsync(u => u.Role == "Master" && u.LinkedId == id);
+            if (userMaster != null)
+            {
+                userMaster.AvatarUrl = avatarPath;
+                _context.Entry(userMaster).State = EntityState.Modified;
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new { url = avatarPath });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Ошибка записи базы данных: {ex.InnerException?.Message ?? ex.Message}");
+            }
         }
+
+
 
         // POST: api/Employees/upload-portfolio/5
         [HttpPost("upload-portfolio/{id}")]
@@ -202,6 +230,27 @@ namespace Beauty.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { url = fileUrl });
+        }
+
+        // DELETE: api/Employees/5
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Owner,Admin")]
+        public async Task<IActionResult> DeleteEmploee(int id)
+        {
+            var emploee = await _context.Emploees.FindAsync(id);
+            if (emploee == null) return NotFound("Сотрудник не найден.");
+
+            // Проверяем, есть ли у мастера активные записи клиентов
+            bool hasRecordings = await _context.Recordings.AnyAsync(r => r.EmploeeId == id && r.Status != "Cancelled");
+            if (hasRecordings)
+            {
+                return BadRequest("Нельзя удалить мастера, так как у него есть незавершенные записи клиентов.");
+            }
+
+            _context.Emploees.Remove(emploee);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
 
         // DELETE: api/Employees/delete-portfolio/5?photoUrl=uploads/portfolio/file.jpg
@@ -241,7 +290,7 @@ namespace Beauty.Controllers
             return BadRequest("Указанное фото не найдено в портфолио этого мастера.");
         }
 
-
+       
 
         private bool EmploeeExists(int id)
         {

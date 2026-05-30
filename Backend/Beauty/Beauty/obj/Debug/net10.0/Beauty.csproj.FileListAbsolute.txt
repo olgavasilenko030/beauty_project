@@ -250,3 +250,4 @@ E:\Beauty_Project\Backend\Beauty\Beauty\obj\Debug\net10.0\Beauty.genruntimeconfi
 E:\Beauty_Project\Backend\Beauty\Beauty\obj\Debug\net10.0\ref\Beauty.dll
 E:\Beauty_Project\Backend\Beauty\Beauty\bin\Debug\net10.0\Beauty.staticwebassets.runtime.json
 E:\Beauty_Project\Backend\Beauty\Beauty\bin\Debug\net10.0\BCrypt-Net-Next.dll
+E:\Beauty_Project\Backend\Beauty\Beauty\obj\Debug\net10.0\Beauty.sourcelink.json

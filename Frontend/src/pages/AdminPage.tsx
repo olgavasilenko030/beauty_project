@@ -23,6 +23,8 @@ import {
   Checkbox,
   Row,
   Col,
+  DatePicker,
+  Select,
 } from "antd";
 import {
   LogoutOutlined,
@@ -43,58 +45,59 @@ import {
   GlobalOutlined,
   SearchOutlined,
   PictureOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
-
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
+const { Option } = Select;
 export default function AdminPage() {
   const [business, setBusiness] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
-
+  const [recordings, setRecordings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingLogo, setLoadingLogo] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
   const [interiorFileList, setInteriorFileList] = useState<any[]>([]);
-
-  // Состояния для живого поиска
   const [searchEmployee, setSearchEmployee] = useState("");
   const [searchClient, setSearchClient] = useState("");
-
+  const [searchRecord, setSearchRecord] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [selectedService, setSelectedService] = useState<any>(null);
-
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
-
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState<any[]>([]);
+  const [salonServices, setSalonServices] = useState<any[]>([]);
+  const [selectedJournalDate, setSelectedJournalDate] = useState<any>(dayjs());
   const [employeeForm] = Form.useForm();
   const [serviceForm] = Form.useForm();
   const [accessForm] = Form.useForm();
   const [salonForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [editServiceForm] = Form.useForm();
-
+  const [recordForm] = Form.useForm();
+  const [clientForm] = Form.useForm();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const bId = localStorage.getItem("businessId");
   const role = localStorage.getItem("role");
   const baseUrl = "https://localhost:7164";
-
   const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
   const fetchEmployees = () => {
     axios
       .get(`${baseUrl}/api/Employees?businessId=${bId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setEmployees(res.data))
-      .catch(() => message.error("Ошибка загрузки списка мастеров"));
+      .catch(() => message.error("Ошибка загрузки мастеров"));
   };
-
   const fetchClients = async () => {
     if (!bId || bId === "0") return;
     try {
@@ -102,15 +105,22 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setClients(cRes.data);
-    } catch (error: any) {
-      console.error(
-        "Детали ошибки загрузки базы клиентов:",
-        error.response?.data,
-      );
-      message.error("Ошибка загрузки базы клиентов");
+    } catch {
+      message.error("Ошибка базы клиентов");
     }
   };
-
+  const fetchAllRecordings = async () => {
+    if (!bId || bId === "0") return;
+    try {
+      const rRes = await axios.get(
+        `${baseUrl}/api/Recordings?businessId=${bId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setRecordings(rRes.data);
+    } catch {
+      message.error("Ошибка загрузки журнала визитов");
+    }
+  };
   const fetchAllData = async () => {
     if (!bId || bId === "0") return;
     setLoading(true);
@@ -119,13 +129,11 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBusiness(bRes.data);
-
       let initialHours: any = null;
       if (bRes.data.workingHours && bRes.data.workingHours.includes(" - ")) {
         const parts = bRes.data.workingHours.split(" - ");
         initialHours = [dayjs(parts[0], "HH:mm"), dayjs(parts[1], "HH:mm")];
       }
-
       salonForm.setFieldsValue({
         name: bRes.data.name,
         address:
@@ -135,16 +143,14 @@ export default function AdminPage() {
         workingDays: bRes.data.workingDays || [],
         workingHoursRange: initialHours,
         vk: bRes.data.socialLinks?.[0] || "",
-        instagram: bRes.data.socialLinks?.[1] || "",
+        instagram: bRes.data.socialLinks?.[0] || "",
       });
-
       if (bRes.data.logoUrl) {
         const cleanPath = bRes.data.logoUrl.startsWith("/")
           ? bRes.data.logoUrl
           : `/${bRes.data.logoUrl}`;
         setLogoUrl(`${baseUrl}${cleanPath}`);
       }
-
       if (bRes.data.interiorPhotos) {
         setInteriorFileList(
           bRes.data.interiorPhotos.map((url: string, index: number) => {
@@ -158,16 +164,15 @@ export default function AdminPage() {
           }),
         );
       }
-
       fetchEmployees();
       await fetchClients();
+      await fetchAllRecordings();
     } catch {
-      message.error("Ошибка при инициализации панели администратора");
+      message.error("Ошибка инициализации панели");
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (!token || (role !== "Admin" && role !== "Owner")) {
       navigate("/login");
@@ -175,13 +180,15 @@ export default function AdminPage() {
       fetchAllData();
     }
   }, [bId]);
-
   const handleSaveSalonInfo = async (values: any) => {
     try {
-      const hoursString = values.workingHoursRange
-        ? `${values.workingHoursRange[0].format("HH:mm")} - ${values.workingHoursRange[1].format("HH:mm")}`
-        : "09:00 - 21:00";
-
+      // ИСПРАВЛЕНО: Добавили точные индексы [0] и [1] для чтения массива времени
+      const hoursString =
+        values.workingHoursRange &&
+        values.workingHoursRange[0] &&
+        values.workingHoursRange[1]
+          ? `${values.workingHoursRange[0].format("HH:mm")} - ${values.workingHoursRange[1].format("HH:mm")}`
+          : "09:00 - 21:00";
       const payload = {
         ...business,
         Name: values.name,
@@ -189,14 +196,13 @@ export default function AdminPage() {
         Phone: values.phone,
         Description: values.description,
         WorkingHours: hoursString,
-        WorkingDays: values.workingDays,
+        WorkingDays: values.workingDays || [],
         SocialLinks: [values.vk || "", values.instagram || ""],
       };
-
       await axios.put(`${baseUrl}/api/Businesses/${bId}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      message.success("Данные салона успешно обновлены!");
+      message.success("Данные салона обновлены!");
       fetchAllData();
     } catch {
       message.error("Ошибка сохранения данных");
@@ -218,21 +224,19 @@ export default function AdminPage() {
         : `/${serverPath}`;
       setLogoUrl(`${baseUrl}${cleanPath}`);
       setLoadingLogo(false);
-      message.success("Логотип салона успешно сохранен!");
+      message.success("Логотип сохранен!");
     } else if (info.file.status === "error") {
       setLoadingLogo(false);
-      message.error("Ошибка при сохранении вывески");
+      message.error("Ошибка сохранения вывески");
     }
   };
-
   const handleInteriorChange = (info: any) => {
     setInteriorFileList([...info.fileList]);
     if (info.file.status === "done") {
-      message.success("Фото интерьера загружено!");
+      message.success("Фото загружено!");
       fetchAllData();
     }
   };
-
   const handleRemoveInterior = async (file: any) => {
     const relativePath = file.url ? file.url.replace(baseUrl, "") : "";
     try {
@@ -240,14 +244,13 @@ export default function AdminPage() {
         `${baseUrl}/api/Businesses/delete-interior/${bId}?photoUrl=${encodeURIComponent(relativePath)}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      message.success("Фото удалено из галереи салона");
+      message.success("Фото удалено");
       return true;
     } catch {
-      message.error("Не удалось удалить фото на сервере");
+      message.error("Не удалось удалить фото");
       return false;
     }
   };
-
   const handleToggleBlock = async (clientId: number) => {
     try {
       const res = await axios.patch(
@@ -257,14 +260,10 @@ export default function AdminPage() {
       );
       message.success(res.data.message);
       fetchClients();
-    } catch (error: any) {
-      message.error(
-        error.response?.data?.message ||
-          "Не удалось изменить статус блокировки",
-      );
+    } catch {
+      message.error("Ошибка изменения блокировки");
     }
   };
-
   const handleAddService = async (values: any) => {
     const payload = {
       name: values.name,
@@ -290,7 +289,6 @@ export default function AdminPage() {
       message.error("Ошибка сохранения услуги");
     }
   };
-
   const handleEditService = async (values: any) => {
     const payload = {
       Id: selectedService.id,
@@ -304,32 +302,26 @@ export default function AdminPage() {
       await axios.put(
         `${baseUrl}/api/Services/${selectedService.id}`,
         payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      message.success("Параметры услуги обновлены!");
+      message.success("Услуга обновлена!");
       setIsEditServiceModalOpen(false);
       fetchEmployees();
-    } catch (err: any) {
-      message.error(
-        err.response?.data || "Не удалось сохранить изменения услуги",
-      );
+    } catch {
+      message.error("Не удалось изменить услугу");
     }
   };
-
   const handleDeleteService = async (id: number) => {
     try {
-      const res = await axios.delete(`${baseUrl}/api/Services/${id}`, {
+      await axios.delete(`${baseUrl}/api/Services/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      message.success(res.data.message || "Услуга удалена!");
+      message.success("Услуга удалена!");
       fetchEmployees();
     } catch {
       message.error("Не удалось удалить услугу");
     }
   };
-
   const handleCreateAccess = async (values: any) => {
     const payload = {
       Email: values.email,
@@ -345,10 +337,9 @@ export default function AdminPage() {
       setIsAccessModalOpen(false);
       accessForm.resetFields();
     } catch {
-      message.error("Ошибка при создании доступа");
+      message.error("Ошибка создания доступа");
     }
   };
-
   const handleEditEmployee = async (values: any) => {
     const payload = {
       Id: selectedEmployee.id,
@@ -363,31 +354,214 @@ export default function AdminPage() {
       await axios.put(
         `${baseUrl}/api/Employees/${selectedEmployee.id}`,
         payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      message.success("Данные сотрудника изменены!");
+      message.success("Данные изменены!");
       setIsEditModalOpen(false);
       fetchEmployees();
     } catch {
       message.error("Не удалось сохранить изменения");
     }
   };
-
   const handleDeleteEmployee = async (id: number) => {
     try {
       await axios.delete(`${baseUrl}/api/Employees/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      message.success("Сотрудник удален из штата");
+      message.success("Сотрудник удален");
       fetchEmployees();
-    } catch (error: any) {
-      message.error(error.response?.data || "Ошибка при удалении");
+    } catch {
+      message.error("Ошибка удаления");
+    }
+  };
+  const handleAdminRecordMasterChange = (masterId: number) => {
+    // Принудительно сбрасываем выбранную услугу в форме, чтобы не записать старую процедуру от другого мастера
+    recordForm.setFieldsValue({ serviceId: undefined });
+
+    axios
+      .get(`${baseUrl}/api/Services?employeeId=${masterId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setSalonServices(res.data))
+      .catch(() => message.error("Ошибка загрузки прайса услуг мастера"));
+  };
+
+  const handleSaveRecord = async (values: any) => {
+    const targetDate = values.date.format("YYYY-MM-DD");
+    const targetTime = values.time.format("HH:mm:00");
+    const localDateTimeString = `${targetDate}T${targetTime}`;
+
+    let endHour = 21,
+      endMinute = 0;
+    if (business?.workingHours && business.workingHours.includes(" - ")) {
+      const closingPart = business.workingHours.split(" - ");
+      const timeParts = closingPart[1].split(":");
+      endHour = parseInt(timeParts[0]);
+      endMinute = parseInt(timeParts[1]);
+    }
+    const salonEndTime = dayjs(targetDate)
+      .hour(endHour)
+      .minute(endMinute)
+      .second(0);
+
+    // ИСПРАВЛЕНО: Ищем длительность услуги напрямую в salonServices (гарантированный массив с бэкенда)
+    const serviceInfo = salonServices.find(
+      (s: any) => s.id === values.serviceId,
+    );
+
+    if (serviceInfo && serviceInfo.duration) {
+      try {
+        const [durationHours, durationMinutes] = serviceInfo.duration
+          .split(":")
+          .map(Number);
+        const appointmentStartTime = dayjs(`${targetDate}T${targetTime}`);
+        const appointmentEndTime = appointmentStartTime
+          .add(durationHours, "hour")
+          .add(durationMinutes, "minute");
+
+        if (appointmentEndTime.isAfter(salonEndTime)) {
+          message.error(
+            `Запись невозможна! Процедура длится ${durationHours} ч. и закончится в ${appointmentEndTime.format("HH:mm")}, а салон работает до ${salonEndTime.format("HH:mm")}.`,
+          );
+          return;
+        }
+      } catch (e) {
+        console.error("Ошибка парсинга длительности услуги:", e);
+      }
+    }
+
+    const payload: any = {
+      AppointmentTime: localDateTimeString,
+      EmploeeId: values.employeeId, // <-- ПРОВЕРЬ: должно быть точно так (oe в середине, values.ye)
+      ServiceId: values.serviceId,
+      ClientId: values.clientId,
+      Status: selectedRecord ? selectedRecord.status : "Scheduled",
+    };
+
+    try {
+      if (selectedRecord) {
+        payload.Id = selectedRecord.id;
+        await axios.put(
+          `${baseUrl}/api/Recordings/${selectedRecord.id}`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        message.success("Запись успешно обновлена!");
+      } else {
+        await axios.post(`${baseUrl}/api/Recordings`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        message.success("Запись успешно создана в журнале!");
+      }
+      setIsRecordModalOpen(false);
+      setSelectedRecord(null);
+      setSalonServices([]);
+      recordForm.resetFields();
+      fetchAllRecordings(); // Обновляем сетку визитов
+    } catch (err: any) {
+      message.error(err.response?.data || "Ошибка при сохранении записи");
     }
   };
 
+  const handleDeleteRecording = async (id: number) => {
+    try {
+      await axios.delete(`${baseUrl}/api/Recordings/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      message.success("Запись удалена");
+      fetchAllRecordings();
+    } catch {
+      message.error("Не удалось удалить запись");
+    }
+  };
+  const handleSaveClient = async (values: any) => {
+    const payload = {
+      id: 0,
+      name: values.name,
+      surname: values.surname,
+      phone: values.phone,
+    };
+    try {
+      await axios.post(`${baseUrl}/api/Clients`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      message.success("Клиент добавлен!");
+      setIsClientModalOpen(false);
+      clientForm.resetFields();
+      fetchClients();
+    } catch {
+      message.error("Ошибка создания клиента");
+    }
+  };
   const employeeColumns = [
+    {
+      title: "Фото",
+      dataIndex: "avatarUrl",
+      key: "avatar",
+      width: 80,
+      render: (url: string, record: any) => (
+        <Upload
+          name="file"
+          showUploadList={false}
+          action={`${baseUrl}/api/Employees/upload-avatar/${record.id}`}
+          headers={{ Authorization: `Bearer ${token}` }}
+          onChange={(info) => {
+            if (info.file.status === "done") {
+              message.success("Аватар мастера успешно обновлен!");
+
+              // Перехватываем путь, возвращенный бэкендом
+              const serverUrl = info.file.response?.url;
+
+              if (serverUrl) {
+                // Мгновенно обновляем стейт React, фиксируя аватарку на экране
+                setEmployees((prev) => [
+                  ...prev.map((emp) =>
+                    emp.id === record.id
+                      ? { ...emp, avatarUrl: serverUrl }
+                      : emp,
+                  ),
+                ]);
+              }
+              // ИСПРАВЛЕНО: Убран вызов fetchEmployees(), чтобы база не затирала картинку старым кэшем!
+            } else if (info.file.status === "error") {
+              message.error("Не удалось сохранить аватар");
+            }
+          }}
+        >
+          {url ? (
+            <img
+              src={`${baseUrl}${url.startsWith("/") ? url : `/${url}`}?t=${new Date().getTime()}`}
+              alt="avatar"
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                objectFit: "cover",
+                cursor: "pointer",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                background: "#f0f2f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                border: "1px dashed #d9d9d9",
+              }}
+            >
+              <UserAddOutlined style={{ fontSize: 14, color: "#faad14" }} />
+            </div>
+          )}
+        </Upload>
+      ),
+    },
     {
       title: "Имя",
       dataIndex: "name",
@@ -445,11 +619,8 @@ export default function AdminPage() {
             Изменить
           </Button>
           <Popconfirm
-            title="Уволить мастера?"
+            title="Уволить?"
             onConfirm={() => handleDeleteEmployee(record.id)}
-            okText="Да"
-            cancelText="Нет"
-            okButtonProps={{ danger: true }}
           >
             <Button
               type="primary"
@@ -472,7 +643,7 @@ export default function AdminPage() {
       key: "surname",
       render: (s: string) => s || "—",
     },
-    { title: "Email аккаунта", dataIndex: "email", key: "email" },
+    { title: "Email", dataIndex: "email", key: "email" },
     {
       title: "Статус",
       dataIndex: "isBlocked",
@@ -498,25 +669,39 @@ export default function AdminPage() {
       ),
     },
   ];
-
   const filteredEmployeesList = employees.filter((e) => {
-    const searchString =
+    const s =
       `${e.name || ""} ${e.surname || ""} ${e.jobTitle || ""}`.toLowerCase();
-    return searchString.includes(searchEmployee.toLowerCase());
+    return s.includes(searchEmployee.toLowerCase());
   });
-
   const filteredClientsList = clients.filter((c) => {
-    const searchString =
+    const s =
       `${c.name || ""} ${c.surname || ""} ${c.email || ""}`.toLowerCase();
-    return searchString.includes(searchClient.toLowerCase());
+    return s.includes(searchClient.toLowerCase());
   });
-
   if (loading)
     return (
       <div style={{ textAlign: "center", marginTop: 100 }}>
-        <Spin size="large" description="Загрузка панели..." />
+        <Spin size="large" description="Загрузка..." />
       </div>
     );
+  // ИСПРАВЛЕНО: Динамический расчет сетки времени строго по графику салона из базы данных
+  const timeSlots: string[] = [];
+  let startHour = 9,
+    endHour = 21;
+
+  if (business?.workingHours && business.workingHours.includes(" - ")) {
+    const parts = business.workingHours.split(" - ");
+    startHour = parseInt(parts[0].split(":")[0]);
+    endHour = parseInt(parts[1].split(":")[0]);
+  }
+
+  for (let h = startHour; h < endHour; h++) {
+    timeSlots.push(
+      `${h.toString().padStart(2, "0")}:00`,
+      `${h.toString().padStart(2, "0")}:30`,
+    );
+  }
 
   return (
     <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
@@ -525,8 +710,8 @@ export default function AdminPage() {
           background: "#001529",
           color: "white",
           display: "flex",
-          justifyContent: "space-between", // ИСПРАВЛЕНО: строго валидное CSS-свойство
-          alignItems: "center", // Выравнивает элементы ровно по вертикали
+          justifyContent: "space-between",
+          alignItems: "center",
           padding: "0 20px",
         }}
       >
@@ -544,7 +729,6 @@ export default function AdminPage() {
           Выйти
         </Button>
       </Header>
-
       <Content style={{ padding: "24px" }}>
         <Tabs
           defaultActiveKey="1"
@@ -561,7 +745,7 @@ export default function AdminPage() {
                 <Row gutter={24}>
                   <Col xs={24} md={14}>
                     <Card
-                      title="Основная информация компании"
+                      title="Основная информация"
                       style={{ borderRadius: 12 }}
                     >
                       <Form
@@ -571,67 +755,38 @@ export default function AdminPage() {
                       >
                         <Form.Item
                           name="name"
-                          label="Название салона/студии"
+                          label="Название"
                           rules={[{ required: true }]}
                         >
                           <Input size="large" />
                         </Form.Item>
-                        <Form.Item name="address" label="Фактический адрес">
-                          <Input
-                            size="large"
-                            placeholder="Укажите адрес салона (например: ул. Ленина, д. 10)"
-                          />
+                        <Form.Item name="address" label="Адрес">
+                          <Input size="large" />
                         </Form.Item>
-                        <Form.Item
-                          name="phone"
-                          label="Контактный телефон организации"
-                        >
-                          <Input
-                            size="large"
-                            prefix={<PhoneOutlined />}
-                            placeholder="+7 (999) 000-00-00"
-                          />
+                        <Form.Item name="phone" label="Телефон">
+                          <Input size="large" prefix={<PhoneOutlined />} />
                         </Form.Item>
-                        <Form.Item
-                          name="description"
-                          label="Описание салона (будет видно клиентам)"
-                        >
-                          <TextArea
-                            rows={4}
-                            placeholder="Расскажите о преимуществах вашей студии, атмосфере..."
-                          />
+                        <Form.Item name="description" label="Описание">
+                          <TextArea rows={4} />
                         </Form.Item>
-                        <Form.Item
-                          name="workingDays"
-                          label="Рабочие дни недели"
-                        >
+                        <Form.Item name="workingDays" label="Рабочие дни">
                           <Checkbox.Group options={daysOfWeek} />
                         </Form.Item>
-                        <Form.Item
-                          name="workingHoursRange"
-                          label="Режим работы по часам"
-                        >
+                        <Form.Item name="workingHoursRange" label="Часы работы">
                           <TimePicker.RangePicker
                             format="HH:mm"
                             style={{ width: "100%" }}
                           />
                         </Form.Item>
-
-                        <Title level={5} style={{ marginTop: 20 }}>
-                          <GlobalOutlined /> Социальные сети
-                        </Title>
                         <Row gutter={16}>
                           <Col span={12}>
-                            <Form.Item name="vk" label="Ссылка на ВКонтакте">
-                              <Input placeholder="https://vk.com..." />
+                            <Form.Item name="vk" label="ВКонтакте">
+                              <Input />
                             </Form.Item>
                           </Col>
                           <Col span={12}>
-                            <Form.Item
-                              name="instagram"
-                              label="Ссылка на Instagram"
-                            >
-                              <Input placeholder="https://instagram.com..." />
+                            <Form.Item name="instagram" label="Instagram">
+                              <Input />
                             </Form.Item>
                           </Col>
                         </Row>
@@ -648,19 +803,15 @@ export default function AdminPage() {
                             marginTop: 10,
                           }}
                         >
-                          Сохранить данные салона
+                          Сохранить
                         </Button>
                       </Form>
                     </Card>
                   </Col>
-
                   <Col xs={24} md={10}>
-                    <Card
-                      title="Логотип и Фото интерьера"
-                      style={{ marginBottom: 20 }}
-                    >
+                    <Card title="Медиа">
                       <div style={{ textAlign: "center", marginBottom: 25 }}>
-                        <Text strong>Логотип (Вывеска)</Text>
+                        <Text strong>Логотип</Text>
                         <div style={{ marginTop: 15 }}>
                           <Upload
                             name="file"
@@ -694,14 +845,13 @@ export default function AdminPage() {
                           </Upload>
                         </div>
                       </div>
-
                       <div
                         style={{
                           borderTop: "1px solid #f0f0f0",
                           paddingTop: 20,
                         }}
                       >
-                        <Text strong>Фотогалерея интерьера студии</Text>
+                        <Text strong>Интерьер</Text>
                         <div style={{ marginTop: 15 }}>
                           <Upload
                             action={`${baseUrl}/api/Businesses/upload-interior/${bId}`}
@@ -735,10 +885,7 @@ export default function AdminPage() {
               ),
               children: (
                 <>
-                  <Card
-                    title="Зарегистрировать нового сотрудника"
-                    style={{ marginBottom: 20 }}
-                  >
+                  <Card title="Новый сотрудник" style={{ marginBottom: 20 }}>
                     <Form
                       form={employeeForm}
                       layout="inline"
@@ -754,27 +901,19 @@ export default function AdminPage() {
                             { headers: { Authorization: `Bearer ${token}` } },
                           )
                           .then(() => {
-                            message.success("Мастер добавлен");
+                            message.success("Добавлен");
                             fetchEmployees();
                             employeeForm.resetFields();
                           });
                       }}
                     >
-                      <Form.Item
-                        name="name"
-                        rules={[{ required: true, message: "Введите имя" }]}
-                      >
-                        <Input placeholder="Имя мастера" />
+                      <Form.Item name="name" rules={[{ required: true }]}>
+                        <Input placeholder="Имя" />
                       </Form.Item>
                       <Form.Item name="surname">
-                        <Input placeholder="Фамилия мастера" />
+                        <Input placeholder="Фамилия" />
                       </Form.Item>
-                      <Form.Item
-                        name="jobTitle"
-                        rules={[
-                          { required: true, message: "Укажите должность" },
-                        ]}
-                      >
+                      <Form.Item name="jobTitle" rules={[{ required: true }]}>
                         <Input placeholder="Должность" />
                       </Form.Item>
                       <Button type="primary" htmlType="submit">
@@ -783,10 +922,10 @@ export default function AdminPage() {
                     </Form>
                   </Card>
                   <Card
-                    title="Команда мастеров"
+                    title="Команда"
                     extra={
                       <Input
-                        placeholder="Поиск мастера по ФИО или должности..."
+                        placeholder="Поиск..."
                         prefix={<SearchOutlined />}
                         value={searchEmployee}
                         onChange={(e) => setSearchEmployee(e.target.value)}
@@ -798,51 +937,52 @@ export default function AdminPage() {
                       dataSource={filteredEmployeesList}
                       columns={employeeColumns}
                       rowKey="id"
+                      expandedRowKeys={expandedKeys}
+                      onExpandedRowsChange={(keys) =>
+                        setExpandedKeys([...keys])
+                      }
                       expandable={{
                         expandedRowRender: (record: any) => {
-                          const portfolioList = (
-                            record.portfolioPhotos || []
-                          ).map((url: string, idx: number) => {
-                            const cleanPath = url.startsWith("/")
-                              ? url
-                              : `/${url}`;
-                            return {
-                              uid: idx.toString(),
-                              name: `work-${idx}.jpg`,
-                              status: "done",
-                              url: `${baseUrl}${cleanPath}`,
-                            };
-                          });
+                          // ИСПРАВЛЕНО: Находим актуальные данные мастера прямо из живого стейта employees!
+                          const currentEmpData =
+                            employees.find((e) => e.id === record.id) || record;
+                          const currentPhotosArray =
+                            currentEmpData.portfolioPhotos ||
+                            currentEmpData.PortfolioPhotos ||
+                            [];
 
-                          // ИСПРАВЛЕНО: Глубокая очистка query-параметра пути для удаления фото портфолио
+                          const portfolioList = currentPhotosArray.map(
+                            (url: string, idx: number) => ({
+                              uid: idx.toString(),
+                              name: `w-${idx}.jpg`,
+                              status: "done",
+                              url: `${baseUrl}${url.startsWith("/") ? url : `/${url}`}`,
+                            }),
+                          );
+
                           const handleRemovePortfolio = async (file: any) => {
-                            let relativePath = file.url
+                            let rel = file.url
                               ? file.url.replace(baseUrl, "")
                               : "";
-                            if (relativePath.startsWith("/")) {
-                              relativePath = relativePath.substring(1);
-                            }
+                            if (rel.startsWith("/")) rel = rel.substring(1);
                             try {
                               await axios.delete(
-                                `${baseUrl}/api/Employees/delete-portfolio/${record.id}?photoUrl=${encodeURIComponent(relativePath)}`,
+                                `${baseUrl}/api/Employees/delete-portfolio/${record.id}?photoUrl=${encodeURIComponent(rel)}`,
                                 {
                                   headers: { Authorization: `Bearer ${token}` },
                                 },
                               );
-                              message.success("Работа удалена из портфолио");
+                              message.success("Удалено");
                               fetchEmployees();
                               return true;
                             } catch {
-                              message.error("Не удалось удалить фото");
                               return false;
                             }
                           };
-
                           return (
                             <div
                               style={{
-                                margin: "5px 0",
-                                padding: "20px",
+                                padding: 20,
                                 background: "#fafafa",
                                 borderRadius: 8,
                                 borderLeft: "4px solid #faad14",
@@ -850,17 +990,6 @@ export default function AdminPage() {
                             >
                               <Row gutter={24}>
                                 <Col span={14}>
-                                  <div style={{ marginBottom: 10 }}>
-                                    <Tag
-                                      color="orange"
-                                      style={{
-                                        fontSize: "13px",
-                                        padding: "4px 8px",
-                                      }}
-                                    >
-                                      <ScissorOutlined /> Прайс-лист мастера
-                                    </Tag>
-                                  </div>
                                   <Table
                                     size="small"
                                     dataSource={record.services || []}
@@ -869,40 +998,25 @@ export default function AdminPage() {
                                     bordered
                                     columns={[
                                       {
-                                        title: "Название услуги",
+                                        title: "Услуга",
                                         dataIndex: "name",
-                                        key: "name",
-                                        render: (text) => (
-                                          <strong>{text}</strong>
-                                        ),
+                                        render: (t) => <strong>{t}</strong>,
                                       },
                                       {
-                                        title: "Стоимость визита",
+                                        title: "Цена",
                                         dataIndex: "price",
-                                        key: "price",
-                                        render: (p) => (
-                                          <span
-                                            style={{
-                                              color: "#d4380d",
-                                              fontWeight: "bold",
-                                            }}
-                                          >
-                                            {p} ₽
-                                          </span>
-                                        ),
+                                        render: (p) => <span>{p} ₽</span>,
                                       },
                                       {
-                                        title: "Продолжительность",
+                                        title: "Время",
                                         dataIndex: "duration",
-                                        key: "duration",
                                         render: (d) => (
                                           <Tag color="blue">{d}</Tag>
                                         ),
                                       },
                                       {
                                         title: "Действие",
-                                        key: "serviceAction",
-                                        render: (_: any, svc: any) => (
+                                        render: (_, svc: any) => (
                                           <Space>
                                             <Button
                                               size="small"
@@ -923,13 +1037,10 @@ export default function AdminPage() {
                                               Изменить
                                             </Button>
                                             <Popconfirm
-                                              title="Удалить услугу из прайса?"
+                                              title="Удалить?"
                                               onConfirm={() =>
                                                 handleDeleteService(svc.id)
                                               }
-                                              okText="Да"
-                                              cancelText="Нет"
-                                              okButtonProps={{ danger: true }}
                                             >
                                               <Button
                                                 type="primary"
@@ -951,44 +1062,233 @@ export default function AdminPage() {
                                     paddingLeft: 20,
                                   }}
                                 >
-                                  <div style={{ marginBottom: 15 }}>
-                                    <Tag
-                                      color="purple"
-                                      style={{
-                                        fontSize: "13px",
-                                        padding: "4px 8px",
-                                      }}
-                                    >
+                                  <div
+                                    style={{
+                                      marginBottom: 15,
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <Tag color="purple">
                                       <PictureOutlined /> Портфолио / Примеры
                                       работ
                                     </Tag>
+
+                                    {/* Красивая фиолетовая кнопка DIKIDI стиля через скрытый input */}
+                                    <label
+                                      style={{
+                                        display: "inline-block",
+                                        margin: 0,
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          background: "#722ed1",
+                                          color: "#fff",
+                                          padding: "5px 12px",
+                                          borderRadius: "4px",
+                                          fontSize: "12px",
+                                          fontWeight: 500,
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "4px",
+                                          boxShadow:
+                                            "0 2px 4px rgba(0,0,0,0.05)",
+                                        }}
+                                      >
+                                        <PlusOutlined
+                                          style={{ fontSize: "11px" }}
+                                        />{" "}
+                                        Добавить фото
+                                      </div>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        style={{ display: "none" }}
+                                        onChange={async (e) => {
+                                          if (
+                                            !e.target.files ||
+                                            e.target.files.length === 0
+                                          )
+                                            return;
+                                          // ИСПРАВЛЕНО: Добавлен точный индекс [0] для корректного считывания файла
+                                          const file = e.target.files[0];
+                                          const formData = new FormData();
+                                          formData.append("file", file);
+
+                                          try {
+                                            const res = await axios.post(
+                                              `${baseUrl}/api/Employees/upload-portfolio/${record.id}`,
+                                              formData,
+                                              {
+                                                headers: {
+                                                  "Content-Type":
+                                                    "multipart/form-data",
+                                                  Authorization: `Bearer ${token}`,
+                                                },
+                                              },
+                                            );
+
+                                            const serverUrl =
+                                              res.data?.url || res.data?.path;
+                                            if (serverUrl) {
+                                              message.success(
+                                                "Фото мгновенно добавлено в портфолио!",
+                                              );
+
+                                              // Мгновенно обновляем стейт React в памяти для моментальной отрисовки
+                                              setEmployees((prev) =>
+                                                prev.map((emp) => {
+                                                  if (emp.id === record.id) {
+                                                    const current =
+                                                      emp.portfolioPhotos || [];
+                                                    return {
+                                                      ...emp,
+                                                      portfolioPhotos: [
+                                                        ...current,
+                                                        serverUrl,
+                                                      ],
+                                                    };
+                                                  }
+                                                  return emp;
+                                                }),
+                                              );
+                                            }
+                                          } catch {
+                                            message.error(
+                                              "Не удалось загрузить фото в портфолио",
+                                            );
+                                          }
+                                        }}
+                                      />
+                                    </label>
                                   </div>
-                                  <Upload
-                                    action={`${baseUrl}/api/Employees/upload-portfolio/${record.id}`}
-                                    headers={{
-                                      Authorization: `Bearer ${token}`,
-                                    }}
-                                    listType="picture-card"
-                                    fileList={portfolioList}
-                                    onRemove={handleRemovePortfolio}
-                                    onChange={(info) => {
-                                      if (info.file.status === "done") {
-                                        message.success(
-                                          "Фото успешно добавлено в портфолио мастера!",
-                                        );
-                                        fetchEmployees();
-                                      }
+
+                                  {/* Живая адаптивная плитка картинок из стейта с кнопками быстрого удаления */}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 10,
+                                      maxHeight: 220,
+                                      overflowY: "auto",
+                                      padding: 4,
                                     }}
                                   >
-                                    {portfolioList.length >= 12 ? null : (
-                                      <div>
-                                        <PlusOutlined />
-                                        <div style={{ marginTop: 8 }}>
-                                          Загрузить
-                                        </div>
+                                    {(
+                                      employees.find((e) => e.id === record.id)
+                                        ?.portfolioPhotos || []
+                                    ).length === 0 ? (
+                                      <div
+                                        style={{
+                                          color: "#bfbfbf",
+                                          fontSize: 12,
+                                          padding: "20px 0",
+                                        }}
+                                      >
+                                        Нет загруженных работ
                                       </div>
+                                    ) : (
+                                      (
+                                        employees.find(
+                                          (e) => e.id === record.id,
+                                        )?.portfolioPhotos || []
+                                      ).map((url: string, idx: number) => {
+                                        const fullImgUrl = `${baseUrl}${url.startsWith("/") ? url : `/${url}`}`;
+                                        return (
+                                          <div
+                                            key={idx}
+                                            style={{
+                                              position: "relative",
+                                              width: 70,
+                                              height: 70,
+                                              borderRadius: 6,
+                                              overflow: "hidden",
+                                              border: "1px solid #d9d9d9",
+                                              boxShadow:
+                                                "0 2px 4px rgba(0,0,0,0.02)",
+                                            }}
+                                          >
+                                            <img
+                                              src={fullImgUrl}
+                                              alt="work"
+                                              style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                objectFit: "cover",
+                                              }}
+                                            />
+                                            <Button
+                                              type="primary"
+                                              danger
+                                              shape="circle"
+                                              icon={
+                                                <DeleteOutlined
+                                                  style={{ fontSize: 10 }}
+                                                />
+                                              }
+                                              size="small"
+                                              style={{
+                                                position: "absolute",
+                                                top: 2,
+                                                right: 2,
+                                                width: 18,
+                                                height: 18,
+                                                minWidth: 18,
+                                                padding: 0,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                              }}
+                                              onClick={async () => {
+                                                let rel = url.startsWith("/")
+                                                  ? url.substring(1)
+                                                  : url;
+                                                try {
+                                                  await axios.delete(
+                                                    `${baseUrl}/api/Employees/delete-portfolio/${record.id}?photoUrl=${encodeURIComponent(rel)}`,
+                                                    {
+                                                      headers: {
+                                                        Authorization: `Bearer ${token}`,
+                                                      },
+                                                    },
+                                                  );
+                                                  message.success(
+                                                    "Фото удалено",
+                                                  );
+                                                  setEmployees((prev) =>
+                                                    prev.map((emp) => {
+                                                      if (
+                                                        emp.id === record.id
+                                                      ) {
+                                                        return {
+                                                          ...emp,
+                                                          portfolioPhotos: (
+                                                            emp.portfolioPhotos ||
+                                                            []
+                                                          ).filter(
+                                                            (p: string) =>
+                                                              p !== url,
+                                                          ),
+                                                        };
+                                                      }
+                                                      return emp;
+                                                    }),
+                                                  );
+                                                } catch {
+                                                  message.error(
+                                                    "Не удалось удалить фото",
+                                                  );
+                                                }
+                                              }}
+                                            />
+                                          </div>
+                                        );
+                                      })
                                     )}
-                                  </Upload>
+                                  </div>
                                 </Col>
                               </Row>
                             </div>
@@ -1011,10 +1311,10 @@ export default function AdminPage() {
               ),
               children: (
                 <Card
-                  title="Все клиенты системы"
+                  title="Все клиенты"
                   extra={
                     <Input
-                      placeholder="Поиск клиента по имени, фамилии или Email..."
+                      placeholder="Поиск..."
                       prefix={<SearchOutlined />}
                       value={searchClient}
                       onChange={(e) => setSearchClient(e.target.value)}
@@ -1027,6 +1327,334 @@ export default function AdminPage() {
                     columns={clientColumns}
                     rowKey="id"
                   />
+                </Card>
+              ),
+            },
+            {
+              key: "4",
+              label: (
+                <span>
+                  <CalendarOutlined />
+                  Журнал записей
+                </span>
+              ),
+              children: (
+                <Card
+                  title={
+                    <Space>
+                      <DatePicker
+                        value={selectedJournalDate}
+                        onChange={(d) => setSelectedJournalDate(d)}
+                        format="DD.MM.YYYY"
+                        allowClear={false}
+                      />
+                      <Button
+                        icon={<UserAddOutlined />}
+                        onClick={() => setIsClientModalOpen(true)}
+                      >
+                        + Новый клиент
+                      </Button>
+                    </Space>
+                  }
+                >
+                  <div style={{ overflowX: "auto" }}>
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        background: "#fff",
+                        tableLayout: "fixed",
+                      }}
+                    >
+                      <thead>
+                        <tr>
+                          <th
+                            style={{
+                              border: "1px solid #f0f0f0",
+                              padding: 8,
+                              background: "#fafafa",
+                              width: 80,
+                            }}
+                          >
+                            Время
+                          </th>
+                          {employees.map((e) => (
+                            <th
+                              key={e.id}
+                              style={{
+                                border: "1px solid #f0f0f0",
+                                padding: 8,
+                                background: "#fafafa",
+                                textAlign: "center",
+                                width: 200,
+                              }}
+                            >
+                              {e.name}
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: "normal",
+                                  color: "#8c8c8c",
+                                }}
+                              >
+                                {e.jobTitle}
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {timeSlots.map((slot, slotIdx) => {
+                          return (
+                            <tr key={slot} style={{ height: 60 }}>
+                              <td
+                                style={{
+                                  border: "1px solid #f0f0f0",
+                                  padding: 8,
+                                  textAlign: "center",
+                                  fontWeight: "bold",
+                                  background: "#fafafa",
+                                  verticalAlign: "top",
+                                }}
+                              >
+                                {slot}
+                              </td>
+                              {employees.map((emp) => {
+                                const currentSlotTime = dayjs(
+                                  `${selectedJournalDate.format("YYYY-MM-DD")}T${slot}:00`,
+                                );
+                                const activeRec = recordings.find((r) => {
+                                  const matchDate =
+                                    dayjs(r.appointmentTime).format(
+                                      "YYYY-MM-DD",
+                                    ) ===
+                                    selectedJournalDate.format("YYYY-MM-DD");
+                                  const matchEmp =
+                                    Number(r.emploeeId || r.employeeId || 0) ===
+                                    Number(emp.id);
+                                  if (
+                                    !matchDate ||
+                                    !matchEmp ||
+                                    r.status === "Cancelled"
+                                  )
+                                    return false;
+                                  const start = dayjs(r.appointmentTime);
+                                  let [h, m] = ["0", "30"];
+                                  if (r.service?.duration) {
+                                    [h, m] = r.service.duration.split(":");
+                                  }
+                                  const end = start
+                                    .add(Number(h), "hour")
+                                    .add(Number(m), "minute");
+                                  return (
+                                    currentSlotTime.isSame(start) ||
+                                    (currentSlotTime.isAfter(start) &&
+                                      currentSlotTime.isBefore(end))
+                                  );
+                                });
+                                if (activeRec) {
+                                  const start = dayjs(
+                                    activeRec.appointmentTime,
+                                  );
+                                  if (currentSlotTime.isSame(start)) {
+                                    let spans = 1;
+                                    let hStr = "0",
+                                      mStr = "30";
+                                    if (activeRec.service?.duration) {
+                                      const parts =
+                                        activeRec.service.duration.split(":");
+                                      hStr = parts[0];
+                                      mStr = parts[1];
+                                    }
+                                    const parsedHours = parseInt(hStr, 10) || 0;
+                                    const parsedMinutes =
+                                      parseInt(mStr, 10) || 0;
+                                    const totalMinutes =
+                                      parsedHours * 60 + parsedMinutes;
+                                    spans = Math.ceil(totalMinutes / 30);
+                                    const isComp =
+                                      activeRec.status === "Completed";
+                                    const bg = isComp ? "#f6ffed" : "#e6f7ff";
+                                    const borderCol = isComp
+                                      ? "#b7eb8f"
+                                      : "#91d5ff";
+                                    return (
+                                      <td
+                                        key={emp.id}
+                                        rowSpan={spans}
+                                        style={{
+                                          border: "1px solid #f0f0f0",
+                                          padding: 2,
+                                          background: bg,
+                                          verticalAlign: "top",
+                                          height: "1px",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            border: `1px solid ${borderCol}`,
+                                            borderRadius: 4,
+                                            padding: 8,
+                                            fontSize: 12,
+                                            height: "100%",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            justifyContent: "space-between",
+                                            boxShadow:
+                                              "0 2px 4px rgba(0,0,0,0.02)",
+                                            boxSizing: "border-box",
+                                          }}
+                                        >
+                                          <div>
+                                            <Text
+                                              strong
+                                              style={{
+                                                fontSize: 13,
+                                                display: "block",
+                                                color: "#001529",
+                                              }}
+                                            >
+                                              {activeRec.client?.name ||
+                                                "Гость"}
+                                            </Text>
+                                            <div
+                                              style={{
+                                                fontSize: 11,
+                                                color: "#595959",
+                                                marginTop: 4,
+                                                fontWeight: 500,
+                                              }}
+                                            >
+                                              {activeRec.service?.name ||
+                                                "Процедура"}
+                                            </div>
+                                            <div
+                                              style={{
+                                                fontSize: 10,
+                                                color: "#8c8c8c",
+                                                marginTop: 2,
+                                              }}
+                                            >
+                                              Длительность: {parsedHours}ч{" "}
+                                              {parsedMinutes}м
+                                            </div>
+                                          </div>
+                                          <div
+                                            style={{
+                                              marginTop: 12,
+                                              display: "flex",
+                                              justifyContent: "space-between",
+                                              alignItems: "center",
+                                              borderTop: `1px dashed ${borderCol}`,
+                                              paddingTop: 6,
+                                            }}
+                                          >
+                                            <Text
+                                              type="danger"
+                                              strong
+                                              style={{ fontSize: 13 }}
+                                            >
+                                              {activeRec.service?.price} ₽
+                                            </Text>
+                                            <Space size={2}>
+                                              <Button
+                                                size="small"
+                                                type="text"
+                                                icon={
+                                                  <EditOutlined
+                                                    style={{ fontSize: 12 }}
+                                                  />
+                                                }
+                                                onClick={() => {
+                                                  setSelectedRecord(activeRec);
+                                                  handleAdminRecordMasterChange(
+                                                    activeRec.emploeeId ||
+                                                      activeRec.employeeId,
+                                                  );
+                                                  recordForm.setFieldsValue({
+                                                    employeeId:
+                                                      activeRec.emploeeId ||
+                                                      activeRec.employeeId,
+                                                    clientId:
+                                                      activeRec.clientId,
+                                                    serviceId:
+                                                      activeRec.serviceId,
+                                                    date: dayjs(
+                                                      activeRec.appointmentTime,
+                                                    ),
+                                                    time: dayjs(
+                                                      activeRec.appointmentTime,
+                                                    ),
+                                                  });
+                                                  setIsRecordModalOpen(true);
+                                                }}
+                                              />
+                                              <Popconfirm
+                                                title="Удалить визит?"
+                                                onConfirm={() =>
+                                                  handleDeleteRecording(
+                                                    activeRec.id,
+                                                  )
+                                                }
+                                              >
+                                                <Button
+                                                  size="small"
+                                                  type="text"
+                                                  danger
+                                                  icon={
+                                                    <DeleteOutlined
+                                                      style={{ fontSize: 12 }}
+                                                    />
+                                                  }
+                                                />
+                                              </Popconfirm>
+                                            </Space>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    );
+                                  }
+
+                                  return null;
+                                }
+                                return (
+                                  <td
+                                    key={emp.id}
+                                    style={{
+                                      border: "1px solid #f0f0f0",
+                                      padding: 4,
+                                      textAlign: "center",
+                                      cursor: "pointer",
+                                      background: "#fff",
+                                    }}
+                                    onClick={() => {
+                                      recordForm.setFieldsValue({
+                                        employeeId: emp.id,
+                                        date: selectedJournalDate,
+                                        time: dayjs(slot, "HH:mm"),
+                                      });
+                                      handleAdminRecordMasterChange(emp.id);
+                                      setIsRecordModalOpen(true);
+                                    }}
+                                  >
+                                    <Button
+                                      type="text"
+                                      size="small"
+                                      icon={
+                                        <PlusOutlined
+                                          style={{ color: "#bfbfbf" }}
+                                        />
+                                      }
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </Card>
               ),
             },
@@ -1067,7 +1695,6 @@ export default function AdminPage() {
             </Form.Item>
           </Form>
         </Modal>
-
         <Modal
           title={`Создать аккаунт для: ${selectedEmployee?.name}`}
           open={isAccessModalOpen}
@@ -1081,23 +1708,22 @@ export default function AdminPage() {
           >
             <Form.Item
               name="email"
-              label="Email мастера"
+              label="Email"
               rules={[{ required: true, type: "email" }]}
             >
-              <Input placeholder="master@example.com" />
+              <Input />
             </Form.Item>
             <Form.Item
               name="password"
               label="Пароль"
               rules={[{ required: true, min: 5 }]}
             >
-              <Input.Password placeholder="Минимум 5 символов" />
+              <Input.Password />
             </Form.Item>
           </Form>
         </Modal>
-
         <Modal
-          title="Редактировать данные сотрудника"
+          title="Редактировать сотрудника"
           open={isEditModalOpen}
           onOk={() => editForm.submit()}
           onCancel={() => setIsEditModalOpen(false)}
@@ -1112,14 +1738,13 @@ export default function AdminPage() {
             <Form.Item name="jobTitle" label="Должность">
               <Input />
             </Form.Item>
-            <Form.Item name="phone" label="Телефон">
-              <Input placeholder="+7 (999) 123-45-67" />
+            <Form.Item name="phone" label="Telephone">
+              <Input />
             </Form.Item>
           </Form>
         </Modal>
-
         <Modal
-          title="Редактировать параметры услуги"
+          title="Редактировать услугу"
           open={isEditServiceModalOpen}
           onOk={() => editServiceForm.submit()}
           onCancel={() => setIsEditServiceModalOpen(false)}
@@ -1131,24 +1756,114 @@ export default function AdminPage() {
           >
             <Form.Item
               name="name"
-              label="Название процедуры"
+              label="Название"
               rules={[{ required: true }]}
             >
               <Input />
             </Form.Item>
-            <Form.Item
-              name="price"
-              label="Стоимость визита (₽)"
-              rules={[{ required: true }]}
-            >
+            <Form.Item name="price" label="Цена" rules={[{ required: true }]}>
               <InputNumber style={{ width: "100%" }} />
             </Form.Item>
             <Form.Item
               name="duration"
-              label="Продолжительность сеанса"
+              label="Время"
               rules={[{ required: true }]}
             >
               <TimePicker format="HH:mm" style={{ width: "100%" }} />
+            </Form.Item>
+          </Form>
+        </Modal>
+        <Modal
+          title={selectedRecord ? "Редактирование записи" : "Новая запись"}
+          open={isRecordModalOpen}
+          onOk={() => recordForm.submit()}
+          onCancel={() => {
+            setIsRecordModalOpen(false);
+            setSelectedRecord(null);
+            setSalonServices([]);
+          }}
+        >
+          <Form form={recordForm} layout="vertical" onFinish={handleSaveRecord}>
+            <Form.Item
+              name="employeeId"
+              label="Мастер"
+              rules={[{ required: true, message: "Выберите мастера" }]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="children"
+                onChange={handleAdminRecordMasterChange}
+              >
+                {employees.map((e: any) => (
+                  <Option key={e.id} value={e.id}>
+                    {e.name} {e.surname || ""}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="clientId"
+              label="Клиент"
+              rules={[{ required: true, message: "Выберите клиента" }]}
+            >
+              <Select showSearch optionFilterProp="children">
+                {clients.map((c: any) => (
+                  <Option key={c.id} value={c.id}>
+                    {c.name} {c.surname || ""}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="serviceId"
+              label="Услуга"
+              rules={[{ required: true, message: "Выберите услугу" }]}
+            >
+              <Select disabled={salonServices.length === 0}>
+                {salonServices.map((s: any) => (
+                  <Option key={s.id} value={s.id}>
+                    {s.name} — {s.price} ₽
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="date"
+                  label="Дата"
+                  rules={[{ required: true }]}
+                >
+                  <DatePicker style={{ width: "100%" }} format="DD.MM.YYYY" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="time"
+                  label="Время"
+                  rules={[{ required: true }]}
+                >
+                  <TimePicker style={{ width: "100%" }} format="HH:mm" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Modal>
+        <Modal
+          title="Новый клиент"
+          open={isClientModalOpen}
+          onOk={() => clientForm.submit()}
+          onCancel={() => setIsClientModalOpen(false)}
+        >
+          <Form form={clientForm} layout="vertical" onFinish={handleSaveClient}>
+            <Form.Item name="name" label="Имя" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="surname" label="Фамилия">
+              <Input />
+            </Form.Item>
+            <Form.Item name="phone" label="Телефон">
+              <Input />
             </Form.Item>
           </Form>
         </Modal>
