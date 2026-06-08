@@ -21,6 +21,8 @@ public partial class BeautySalonContext : DbContext
     public virtual DbSet<Recording> Recordings { get; set; }
     public virtual DbSet<Service> Services { get; set; }
     public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<Review> Reviews { get; set; }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseNpgsql("Host=localhost;Database=beauty_bd;Username=postgres;Password=pa$$w0rd");
@@ -151,8 +153,27 @@ public partial class BeautySalonContext : DbContext
                 .HasConstraintName("fk_user_business");
         });
 
+        modelBuilder.Entity<Review>(entity =>
+        {
+            // ИСПРАВЛЕНО: Теперь имя ключа в кавычках строго совпадает с CONSTRAINT "Reviews_pkey" в pgAdmin
+            entity.HasKey(e => e.Id).HasName("Reviews_pkey");
+            entity.ToTable("Reviews"); // Имя таблицы в pgAdmin
+
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn().HasColumnName("Id");
+            entity.Property(e => e.RecordingId).HasColumnName("RecordingId");
+            entity.Property(e => e.ClientId).HasColumnName("ClientId");
+            entity.Property(e => e.BusinessId).HasColumnName("BusinessId");
+            entity.Property(e => e.Rating).HasColumnName("Rating");
+            entity.Property(e => e.Comment).HasColumnName("Comment");
+            entity.Property(e => e.ClientName).HasColumnName("ClientName");
+            entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
+        });
+
+
         OnModelCreatingPartial(modelBuilder);
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+    
+
 }

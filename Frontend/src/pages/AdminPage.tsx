@@ -295,8 +295,9 @@ export default function AdminPage() {
       Name: values.name,
       Price: values.price,
       Duration: values.duration.format("HH:mm:00"),
-      EmploeeId: selectedService.emploeeId,
-      BusinessId: selectedService.businessId,
+      // Поддерживаем любой регистр букв из базы, чтобы мастер не отвязался от услуги
+      EmploeeId: selectedService.emploeeId || selectedService.EmploeeId,
+      BusinessId: selectedService.businessId || selectedService.BusinessId,
     };
     try {
       await axios.put(
@@ -306,11 +307,16 @@ export default function AdminPage() {
       );
       message.success("Услуга обновлена!");
       setIsEditServiceModalOpen(false);
-      fetchEmployees();
+
+      // ИСПРАВЛЕНО: Даем базе 300мс записать изменения, затем обновляем справочники в фоне
+      setTimeout(() => {
+        fetchEmployees();
+      }, 300);
     } catch {
       message.error("Не удалось изменить услугу");
     }
   };
+
   const handleDeleteService = async (id: number) => {
     try {
       await axios.delete(`${baseUrl}/api/Services/${id}`, {
@@ -358,11 +364,16 @@ export default function AdminPage() {
       );
       message.success("Данные изменены!");
       setIsEditModalOpen(false);
-      fetchEmployees();
+
+      // ИСПРАВЛЕНО: Даем PostgreSQL 300мс зафиксировать трансляцию, затем обновляем список в фоне
+      setTimeout(() => {
+        fetchEmployees();
+      }, 300);
     } catch {
       message.error("Не удалось сохранить изменения");
     }
   };
+
   const handleDeleteEmployee = async (id: number) => {
     try {
       await axios.delete(`${baseUrl}/api/Employees/${id}`, {

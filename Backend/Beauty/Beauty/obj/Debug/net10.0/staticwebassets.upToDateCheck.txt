@@ -42,7 +42,6 @@ wwwroot\uploads\avatars\avatar-4-69bf98b3-0dc8-4156-993b-7bae1eba307d.jfif
 wwwroot\uploads\avatars\avatar-6-4f74701a-762f-45c3-99d2-680b1e359750.JPG
 wwwroot\uploads\avatars\avatar-5-60dfe748-d65d-40ea-a737-24db5ef2a39e.JPG
 wwwroot\uploads\avatars\avatar-5-b508967d-9669-44b6-9d7c-2abfbfbc9e2d.JPG
-wwwroot\uploads\portfolio\58ef0503-a99b-45a3-abfa-58cf1d3621dd.JPG
 wwwroot\uploads\avatars\avatar-6-21ff79f5-5dd7-48bb-8405-d546b6886755.jpg
 wwwroot\uploads\avatars\avatar-5-e3826026-a962-40b6-99a8-0fbeb54656e7.jpg
 wwwroot\uploads\avatars\avatar-4-2b2cfde4-86ef-4efd-9314-d60a6afd3229.jpg
@@ -94,3 +93,9 @@ wwwroot\uploads\portfolio\7e57d879-6f59-44ae-bdfb-8e709f577e90.JPG
 wwwroot\uploads\portfolio\4f8d589d-b65b-488f-b405-97495c5f91b5.JPG
 wwwroot\uploads\portfolio\ce2e5082-a139-4fef-b7fb-cfe769ef87b4.JPG
 wwwroot\uploads\portfolio\4f5cd83c-d61a-4bf0-ad00-14a8f870ba36.JPG
+wwwroot\uploads\portfolio\ea64723a-d27c-497e-bd11-cb97503f2ffc.JPG
+wwwroot\uploads\portfolio\ae3d5993-fb8a-4f5a-a707-c6be5ab03bb0.JPG
+wwwroot\uploads\avatars\avatar-4-61da398b-e4e1-4dae-9e64-5a79fdb1ed8b.jpg
+wwwroot\uploads\avatars\avatar-15-acc50411-60d9-4b4a-86c5-5ad66aafe4db.jpg
+wwwroot\uploads\avatars\avatar-9-89683312-21f3-41c7-aae6-918c3825884e.jpg
+wwwroot\uploads\portfolio\d8e201ea-ca03-43ac-90ab-9de4bb314737.JPG

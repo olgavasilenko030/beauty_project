@@ -47,7 +47,7 @@ namespace Beauty.Controllers
 
         // GET: api/Employees или api/Employees?businessId=1
         [HttpGet]
-        [Authorize]
+        [AllowAnonymous] // ИСПРАВЛЕНО: Теперь список мастеров открыт для гостей карточки салона БЕЗ авторизации!
         public async Task<IActionResult> GetEmployees([FromQuery] int? businessId)
         {
             var query = _context.Emploees.AsQueryable();
@@ -117,7 +117,30 @@ namespace Beauty.Controllers
                 return BadRequest("Имя мастера обязательно для заполнения.");
             }
 
-            _context.Entry(emploee).State = EntityState.Modified;
+            // 1. ИСПРАВЛЕНО: Сначала находим оригинальную запись мастера в базе данных PostgreSQL
+            var existingEmployee = await _context.Emploees.FindAsync(id);
+            if (existingEmployee == null)
+            {
+                return NotFound("Сотрудник для обновления не найден в системе CRM.");
+            }
+
+            // 2. ИСПРАВЛЕНО: Обновляем строго только те поля, которые пришли из формы редактирования
+            existingEmployee.Name = emploee.Name;
+            existingEmployee.Surname = emploee.Surname;
+            existingEmployee.JobTitle = emploee.JobTitle;
+            existingEmployee.Phone = emploee.Phone;
+
+            // Защита: Если с фронтенда по ошибке прилетел null в полях медиа, мы НЕ затираем аватарку и портфолио!
+            if (!string.IsNullOrEmpty(emploee.Description) && emploee.Description.StartsWith("/uploads"))
+            {
+                existingEmployee.Description = emploee.Description;
+            }
+            if (emploee.PortfolioPhotos != null && emploee.PortfolioPhotos.Count > 0)
+            {
+                existingEmployee.PortfolioPhotos = emploee.PortfolioPhotos;
+            }
+
+            _context.Entry(existingEmployee).State = EntityState.Modified;
 
             try
             {
@@ -137,6 +160,7 @@ namespace Beauty.Controllers
 
             return Ok(new { message = "Данные мастера успешно обновлены" });
         }
+
 
         // POST: api/Employees
         [HttpPost]

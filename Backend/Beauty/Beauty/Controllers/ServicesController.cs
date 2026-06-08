@@ -24,7 +24,7 @@ namespace Beauty.Controllers
         // GET: api/Services
         // GET: api/Services или api/Services?employeeId=5 или api/Services?businessId=1
         [HttpGet]
-        [Authorize] // Защищаем эндпоинт авторизацией
+        [AllowAnonymous] 
         public async Task<ActionResult<IEnumerable<object>>> GetServices([FromQuery] int? businessId, [FromQuery] int? employeeId)
         {
             var query = _context.Services.AsQueryable();
@@ -67,7 +67,23 @@ namespace Beauty.Controllers
                 return BadRequest("Идентификатор услуги не совпадает.");
             }
 
-            _context.Entry(service).State = EntityState.Modified;
+            // 1. ИСПРАВЛЕНО: Сначала находим реальную услугу из базы данных со всеми связями
+            var existingService = await _context.Services.FindAsync(id);
+            if (existingService == null)
+            {
+                return NotFound("Услуга для обновления не найдена в системе.");
+            }
+
+            // 2. ИСПРАВЛЕНО: Обновляем только изменённые поля формы, не затирая связи мастера!
+            existingService.Name = service.Name;
+            existingService.Price = service.Price;
+            existingService.Duration = service.Duration;
+
+            // Если фронтенд передал новые ID, бережно обновляем их, страхуясь от null
+            if (service.EmploeeId > 0) existingService.EmploeeId = service.EmploeeId;
+            if (service.BusinessId > 0) existingService.BusinessId = service.BusinessId;
+
+            _context.Entry(existingService).State = EntityState.Modified;
 
             try
             {
@@ -86,6 +102,7 @@ namespace Beauty.Controllers
                 }
             }
         }
+
 
         // POST: api/Services
         [HttpPost]

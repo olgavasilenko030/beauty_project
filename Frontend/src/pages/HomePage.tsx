@@ -33,26 +33,32 @@ const BASE_URL = "https://localhost:7164";
 
 const categories = [
   {
+    id: "hair",
     name: "Парикмахерские услуги",
     img: `${BASE_URL}/uploads/categories/hair.jpg`,
   },
   {
+    id: "nails",
     name: "Ногтевой сервис",
     img: `${BASE_URL}/uploads/categories/nails.jpg`,
   },
   {
+    id: "brows",
     name: "Ресницы & Брови",
     img: `${BASE_URL}/uploads/categories/brows.jpg`,
   },
   {
+    id: "barber",
     name: "Барбершоп",
     img: `${BASE_URL}/uploads/categories/barber.jpg`,
   },
   {
+    id: "cosmetology",
     name: "Косметология",
     img: `${BASE_URL}/uploads/categories/cosmetology.jpg`,
   },
   {
+    id: "massage",
     name: "Массаж & SPA",
     img: `${BASE_URL}/uploads/categories/massage.jpg`,
   },
@@ -84,7 +90,7 @@ export default function HomePage() {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh", background: "#fff" }}>
+    <Layout style={{ minHeight: "110vh", background: "#fff" }}>
       {/* Навигационная панель */}
       <Header
         style={{
@@ -326,17 +332,21 @@ export default function HomePage() {
             Популярные категории услуг
           </Title>
 
-          {/* ИСПРАВЛЕНО: Сетка перестроена на 3-4 крупные карточки в ряд */}
+          {/* ИСПРАВЛЕНО: Сетка категорий теперь переходит на страницу фильтрации салонов по cat.id */}
           <Row gutter={[32, 32]} style={{ maxWidth: 1400, margin: "0 auto" }}>
             {categories.map((cat, index) => (
               <Col xs={24} sm={12} md={12} lg={8} key={index}>
                 <Card
                   hoverable
+                  onClick={() => {
+                    // Если у категории есть id, переходим на фильтрацию, иначе используем имя
+                    const param = (cat as any).id || cat.name;
+                    navigate(`/salons?category=${param}`);
+                  }}
                   cover={
                     <img
                       alt={cat.name}
                       src={cat.img}
-                      /* ИСПРАВЛЕНО: Высота картинки увеличена со 140px до 240px */
                       style={{
                         height: "240px",
                         objectFit: "cover",
@@ -352,10 +362,9 @@ export default function HomePage() {
                     boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
                     transition: "all 0.3s ease",
                   }}
-                  /* ИСПРАВЛЕНО: Увеличены внутренние отступы (padding) до 24px */
-                  bodyStyle={{ padding: "24px", textAlign: "center" }}
+                  /* ИСПРАВЛЕНО: Заменили устаревший bodyStyle на современный styles.body для Ant Design */
+                  styles={{ body: { padding: "24px", textAlign: "center" } }}
                 >
-                  {/* ИСПРАВЛЕНО: Шрифт названия увеличен до 18px и добавлен полужирный вес */}
                   <Text
                     strong
                     style={{

@@ -34,7 +34,7 @@ namespace Beauty.Controllers
         // --- ИСПРАВЛЕНО: Избегаем циклической ссылки (Circular Reference) через плоский анонимный объект ---
         // GET: api/Businesses/5
         [HttpGet("{id}")]
-        [Authorize] // Доступно авторизованным пользователям для просмотра деталей
+        [AllowAnonymous] // ИСПРАВЛЕНО: Теперь витрина салона доступна гостям сайта БЕЗ авторизации!
         public async Task<IActionResult> GetBusiness(int id)
         {
             var businessDto = await _context.Businesses
@@ -63,6 +63,85 @@ namespace Beauty.Controllers
 
             return Ok(businessDto);
         }
+
+
+        // GET: api/Businesses/by-category?category=hair
+        [HttpGet("by-category")]
+        [AllowAnonymous]
+        public async Task<ActionResult<IEnumerable<object>>> GetBusinessesByCategory([FromQuery] string category)
+        {
+            if (string.IsNullOrEmpty(category))
+            {
+                return BadRequest("Категория не указана.");
+            }
+
+            var searchKey = category.ToLower().Trim();
+            var keywords = new List<string>();
+
+            // 1. Настраиваем список ключевых слов (как и раньше)
+            if (searchKey.Contains("hair") || searchKey.Contains("парикмахер") || searchKey.Contains("волос") || searchKey.Contains("стриж") || searchKey.Contains("barber") || searchKey.Contains("барбер"))
+            {
+                keywords.AddRange(new[] { "стрижка", "окрашивание", "укладка", "волос", "прическа", "борода", "hair", "бритье" });
+            }
+            else if (searchKey.Contains("nail") || searchKey.Contains("ногт") || searchKey.Contains("маникюр") || searchKey.Contains("педикюр"))
+            {
+                keywords.AddRange(new[] { "маникюр", "педикюр", "ногт", "гель-лак", "наращивание", "nail", "шеллак" });
+            }
+            else if (searchKey.Contains("brow") || searchKey.Contains("ресниц") || searchKey.Contains("бров") || searchKey.Contains("lash"))
+            {
+                keywords.AddRange(new[] { "бров", "ресниц", "ламинирование", "макияж", "brow", "lash", "визаж" });
+            }
+            else if (searchKey.Contains("cosmetology") || searchKey.Contains("космет") || searchKey.Contains("лиц") || searchKey.Contains("уход") || searchKey.Contains("spa") || searchKey.Contains("массаж"))
+            {
+                keywords.AddRange(new[] { "пилинг", "чистка", "массаж", "косметолог", "маска", "уход", "spa", "срa" });
+            }
+
+            if (keywords.Count == 0)
+            {
+                keywords.Add(searchKey);
+            }
+
+            // 2. ИСПРАВЛЕНО: Скачиваем данные салонов и их услуг, разделяя запрос на простой SQL
+            var allBusinesses = await _context.Businesses
+                .AsNoTracking()
+                .Select(b => new
+                {
+                    b.Id,
+                    b.Name,
+                    b.Address,
+                    b.Phone,
+                    b.Description,
+                    b.WorkingHours,
+                    LogoUrl = b.LogoUrl ?? "",
+                    // Вытаскиваем список названий всех услуг этого салона в виде плоского массива строк
+                    ServiceNames = _context.Services
+                        .Where(s => s.BusinessId == b.Id)
+                        .Select(s => s.Name.ToLower())
+                        .ToList()
+                })
+                .ToListAsync();
+
+            // 3. ИСПРАВЛЕНО: Фильтруем данные в памяти сервера (In-Memory), что исключает ошибки трансляции LINQ!
+            var filteredBusinesses = allBusinesses
+                .Where(b => b.ServiceNames.Any(serviceName =>
+                    keywords.Any(kw => serviceName.Contains(kw))
+                ))
+                .Select(b => new
+                {
+                    b.Id,
+                    b.Name,
+                    b.Address,
+                    b.Phone,
+                    b.Description,
+                    b.WorkingHours,
+                    b.LogoUrl
+                })
+                .ToList();
+
+            return Ok(filteredBusinesses);
+        }
+
+
 
         // PUT: api/Businesses/5
         [HttpPut("{id}")]
