@@ -858,7 +858,13 @@
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
-    "Parameters": [],
+    "Parameters": [
+      {
+        "Name": "rawData",
+        "Type": "System.Text.Json.JsonElement",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {
@@ -889,27 +895,6 @@
   },
   {
     "ContainingType": "Beauty.Controllers.ReviewsController",
-    "Method": "PutReview",
-    "RelativePath": "api/Reviews/{id}",
-    "HttpMethod": "PUT",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "review",
-        "Type": "Beauty.Models.Review",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Beauty.Controllers.ReviewsController",
     "Method": "DeleteReview",
     "RelativePath": "api/Reviews/{id}",
     "HttpMethod": "DELETE",
@@ -918,6 +903,22 @@
     "Parameters": [
       {
         "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Beauty.Controllers.ReviewsController",
+    "Method": "GetBusinessReviews",
+    "RelativePath": "api/Reviews/business/{businessId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "businessId",
         "Type": "System.Int32",
         "IsRequired": true
       }

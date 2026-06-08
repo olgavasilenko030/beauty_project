@@ -21,7 +21,8 @@ public partial class BeautySalonContext : DbContext
     public virtual DbSet<Recording> Recordings { get; set; }
     public virtual DbSet<Service> Services { get; set; }
     public virtual DbSet<User> Users { get; set; }
-    public virtual DbSet<Review> Reviews { get; set; }
+    public virtual DbSet<Beauty.Models.Review> Reviews { get; set; }
+
 
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -174,6 +175,5 @@ public partial class BeautySalonContext : DbContext
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
-    
-
+  
 }

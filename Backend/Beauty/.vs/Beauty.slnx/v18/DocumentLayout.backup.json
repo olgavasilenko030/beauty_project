@@ -94,9 +94,9 @@
               "Title": "ReviewsController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ReviewsController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\ReviewsController.cs",
-              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ReviewsController.cs",
-              "RelativeToolTip": "Beauty\\Controllers\\ReviewsController.cs",
-              "ViewState": "AgIAAGAAAAAAAAAAAAAAAIMAAAAAAAAAAAAAAA==",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ReviewsController.cs*",
+              "RelativeToolTip": "Beauty\\Controllers\\ReviewsController.cs*",
+              "ViewState": "AgIAAEQAAAAAAAAAAAAAAGcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-06T18:49:23.843Z",
               "EditorCaption": ""
@@ -109,7 +109,7 @@
               "RelativeDocumentMoniker": "Beauty\\Models\\Review.cs",
               "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Review.cs",
               "RelativeToolTip": "Beauty\\Models\\Review.cs",
-              "ViewState": "AgIAAAcAAAAAAAAAAAAqwB4AAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAEAAAAAAAAAAAAqwCUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-06T17:25:07.184Z",
               "EditorCaption": ""
@@ -122,7 +122,7 @@
               "RelativeDocumentMoniker": "Beauty\\Models\\BeautySalonContext.cs",
               "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\BeautySalonContext.cs",
               "RelativeToolTip": "Beauty\\Models\\BeautySalonContext.cs",
-              "ViewState": "AgIAAKEAAAAAAAAAAAAmwLAAAAAEAAAAAAAAAA==",
+              "ViewState": "AgIAAAsAAAAAAAAAAADwvxgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-02T20:49:01.846Z",
               "EditorCaption": ""
@@ -267,8 +267,7 @@
               "ToolTip": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UserSecrets\\69eba75b-a20a-4654-9b3d-eb0ffb5ffe24\\secrets.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAADAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-04-25T17:57:28.515Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-25T17:57:28.515Z"
             }
           ]
         }

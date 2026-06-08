@@ -1462,6 +1462,19 @@
         "tags": [
           "Reviews"
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { }
+            },
+            "text/json": {
+              "schema": { }
+            },
+            "application/*+json": {
+              "schema": { }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1508,7 +1521,7 @@
           }
         }
       },
-      "put": {
+      "delete": {
         "tags": [
           "Reviews"
         ],
@@ -1523,38 +1536,21 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Review"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Review"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/Review"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "OK"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/api/Reviews/business/{businessId}": {
+      "get": {
         "tags": [
           "Reviews"
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "businessId",
             "in": "path",
             "required": true,
             "schema": {
@@ -2272,13 +2268,6 @@
         "additionalProperties": false
       },
       "Review": {
-        "required": [
-          "businessId",
-          "clientId",
-          "comment",
-          "rating",
-          "recordingId"
-        ],
         "type": "object",
         "properties": {
           "id": {
@@ -2298,15 +2287,14 @@
             "format": "int32"
           },
           "rating": {
-            "maximum": 5,
-            "minimum": 1,
             "type": "integer",
             "format": "int32"
           },
           "comment": {
             "maxLength": 500,
             "minLength": 0,
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "clientName": {
             "type": "string",
