@@ -44,10 +44,9 @@ namespace Beauty.Controllers
                 })
                 .ToListAsync();
         }
-
         // GET: api/Employees или api/Employees?businessId=1
         [HttpGet]
-        [AllowAnonymous] // ИСПРАВЛЕНО: Теперь список мастеров открыт для гостей карточки салона БЕЗ авторизации!
+        [AllowAnonymous]
         public async Task<IActionResult> GetEmployees([FromQuery] int? businessId)
         {
             var query = _context.Emploees.AsQueryable();
@@ -57,34 +56,39 @@ namespace Beauty.Controllers
                 query = query.Where(e => e.BusinessId == businessId.Value);
             }
 
-            // Формируем плоскую структуру DTO прямо в SQL-запросе
-            var result = await query.Select(e => new
-            {
-                e.Id,
-                e.Name,
-                e.Surname,
-                e.JobTitle,
-                e.Phone,
-                e.BusinessId,
-                portfolioPhotos = e.PortfolioPhotos,
-                // ИСПРАВЛЕНО: Сначала ищем аватарку в аккаунте Users, а если его нет — берем резервный путь из Description
-                avatarUrl = _context.Users
-             .Where(u => u.Role == "Master" && u.LinkedId == e.Id)
-             .Select(u => u.AvatarUrl)
-             .FirstOrDefault() ?? e.Description ?? "",
+            // ИСПРАВЛЕНО: Явно подгружаем связанные услуги через Include, чтобы они не были пустыми
+            var employeesList = await query.Include(e => e.Services).ToListAsync();
 
-                // Вытягиваем дочерние услуги в camelCase без обратных ссылок на мастера
-                Services = e.Services.Select(s => new
+            // Формируем плоскую структуру DTO с маленькими camelCase буквами для React и живым рейтингом!
+            var result = employeesList.Select(e => new
+            {
+                id = e.Id,
+                name = e.Name,
+                surname = e.Surname,
+                jobTitle = e.JobTitle,
+                phone = e.Phone,
+                businessId = e.BusinessId,
+                portfolioPhotos = e.PortfolioPhotos,
+                rating = CalculateMasterRating(e.Id), // Динамический расчет рейтинга мастера по отзывам
+
+                avatarUrl = _context.Users
+                    .Where(u => u.Role == "Master" && u.LinkedId == e.Id)
+                    .Select(u => u.AvatarUrl)
+                    .FirstOrDefault() ?? e.Description ?? "",
+
+                // ИСПРАВЛЕНО: Прямой маппинг коллекции без конфликтов типов данных C#
+                services = e.Services.Select(s => new
                 {
-                    s.Id,
-                    s.Name,
-                    s.Price,
-                    Duration = s.Duration.ToString(@"hh\:mm")
+                    id = s.Id,
+                    name = s.Name,
+                    price = s.Price,
+                    duration = s.Duration.ToString(@"hh\:mm")
                 }).ToList()
-            }).ToListAsync();
+            }).ToList();
 
             return Ok(result);
         }
+
 
 
 
@@ -314,7 +318,29 @@ namespace Beauty.Controllers
             return BadRequest("Указанное фото не найдено в портфолио этого мастера.");
         }
 
-       
+        // Вспомогательный приватный метод для динамического пересчета рейтинга мастера на основе отзывов
+        private double CalculateMasterRating(int employeeId)
+        {
+            // Находим все ID записей визитов в таблице recording, которые принадлежат этому мастеру
+            var recordingIds = _context.Recordings
+                .Where(r => r.EmploeeId == employeeId)
+                .Select(r => r.Id)
+                .ToList();
+
+            if (!recordingIds.Any()) return 5.0; // Если к мастеру еще нет записей визитов
+
+            // Считаем среднюю оценку из таблицы Reviews для этих записей
+            var hasReviews = _context.Reviews.Any(r => recordingIds.Contains(r.RecordingId));
+            if (!hasReviews) return 5.0; // Если визиты есть, но отзывов еще нет — по умолчанию 5.0
+
+            var average = _context.Reviews
+                .Where(r => recordingIds.Contains(r.RecordingId))
+                .Average(r => r.Rating);
+
+            return Math.Round(average, 1); // Округляем до одного знака (например, 4.7)
+        }
+
+
 
         private bool EmploeeExists(int id)
         {

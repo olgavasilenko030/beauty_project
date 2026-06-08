@@ -25,6 +25,9 @@ interface Master {
   surname?: string;
   jobTitle?: string;
   avatarUrl?: string;
+  businessId: number;
+  portfolioPhotos?: string[];
+  rating?: number; // ИСПРАВЛЕНО: Разрешаем TypeScript принимать рейтинг мастера с бэкенда!
 }
 
 // Высококачественные CDN-ссылки на реальные бьюти-фотографии
@@ -403,86 +406,97 @@ export default function HomePage() {
                 </Text>
               </Col>
             ) : (
-              topMasters.map((master) => (
-                <Col xs={24} sm={12} md={8} key={master.id}>
-                  <Card
-                    hoverable
-                    style={{
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      boxShadow: "0 6px 16px rgba(0,0,0,0.04)",
-                    }}
-                    actions={[
-                      <Button
-                        type="link"
-                        onClick={handleBookingClick}
-                        style={{
-                          color: "#faad14",
-                          fontWeight: 700,
-                          fontSize: "15px",
-                        }}
-                      >
-                        Выбрать услуги и время
-                      </Button>,
-                    ]}
-                  >
-                    <Card.Meta
-                      avatar={
-                        <Avatar
-                          size={70}
-                          src={
-                            master.avatarUrl
-                              ? `${baseUrl}${master.avatarUrl}`
-                              : undefined
-                          }
-                          icon={!master.avatarUrl && <UserOutlined />}
-                          style={{ background: "#faad14" }}
-                        />
-                      }
-                      title={
-                        <span
-                          style={{ fontSize: "18px", fontWeight: 600 }}
-                        >{`${master.name} ${master.surname || ""}`}</span>
-                      }
-                      description={
-                        <Space
-                          direction="vertical"
-                          size={4}
-                          style={{ marginTop: "5px", width: "100%" }}
+              // ИСПРАВЛЕНО: Сортируем мастеров по реальному рейтингу из базы данных и берем топ-3 лучших
+              topMasters
+                .sort((a: any, b: any) => (b.rating || 5) - (a.rating || 5))
+                .slice(0, 3)
+                .map((master) => (
+                  <Col xs={24} sm={12} md={8} key={master.id}>
+                    <Card
+                      hoverable
+                      style={{
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        boxShadow: "0 6px 16px rgba(0,0,0,0.04)",
+                      }}
+                      actions={[
+                        <Button
+                          type="link"
+                          onClick={handleBookingClick}
+                          style={{
+                            color: "#faad14",
+                            fontWeight: 700,
+                            fontSize: "15px",
+                          }}
                         >
-                          <Tag
-                            color="gold"
-                            style={{ fontSize: "12px", padding: "2px 8px" }}
+                          Выбрать услуги и время
+                        </Button>,
+                      ]}
+                    >
+                      <Card.Meta
+                        avatar={
+                          <Avatar
+                            size={70}
+                            src={
+                              master.avatarUrl
+                                ? `${baseUrl}${master.avatarUrl}`
+                                : undefined
+                            }
+                            icon={!master.avatarUrl && <UserOutlined />}
+                            style={{ background: "#faad14" }}
+                          />
+                        }
+                        title={
+                          <span
+                            style={{ fontSize: "18px", fontWeight: 600 }}
+                          >{`${master.name} ${master.surname || ""}`}</span>
+                        }
+                        description={
+                          <Space
+                            direction="vertical"
+                            size={4}
+                            style={{ marginTop: "5px", width: "100%" }}
                           >
-                            {master.jobTitle || "Специалист"}
-                          </Tag>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              marginTop: "4px",
-                            }}
-                          >
-                            <Rate
-                              disabled
-                              defaultValue={5}
-                              style={{ fontSize: "13px" }}
-                            />
-                            <Text
-                              type="secondary"
-                              strong
-                              style={{ fontSize: "13px" }}
+                            <Tag
+                              color="gold"
+                              style={{ fontSize: "12px", padding: "2px 8px" }}
                             >
-                              (5.0)
-                            </Text>
-                          </div>
-                        </Space>
-                      }
-                    />
-                  </Card>
-                </Col>
-              ))
+                              {master.jobTitle || "Специалист"}
+                            </Tag>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                marginTop: "4px",
+                              }}
+                            >
+                              {/* ИСПРАВЛЕНО: Выводим живые звезды из pgAdmin (поддерживает половинки звезд) */}
+                              <Rate
+                                disabled
+                                allowHalf
+                                value={master.rating || 5}
+                                style={{ fontSize: "13px" }}
+                              />
+                              {/* ИСПРАВЛЕНО: Выводим точную цифру рейтинга, округленную до 1 знака */}
+                              <Text
+                                type="secondary"
+                                strong
+                                style={{ fontSize: "13px" }}
+                              >
+                                (
+                                {master.rating
+                                  ? master.rating.toFixed(1)
+                                  : "5.0"}
+                                )
+                              </Text>
+                            </div>
+                          </Space>
+                        }
+                      />
+                    </Card>
+                  </Col>
+                ))
             )}
           </Row>
         </div>

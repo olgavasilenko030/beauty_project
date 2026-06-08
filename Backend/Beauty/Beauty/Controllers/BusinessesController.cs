@@ -5,9 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Beauty.Models;
-using Microsoft.AspNetCore.Authorization;
 
 namespace Beauty.Controllers
 {
@@ -16,324 +16,170 @@ namespace Beauty.Controllers
     public class BusinessesController : ControllerBase
     {
         private readonly BeautySalonContext _context;
+        public BusinessesController(BeautySalonContext context) { _context = context; }
 
-        public BusinessesController(BeautySalonContext context)
+        private double CalculateSalonRating(int businessId)
         {
-            _context = context;
+            var hasReviews = _context.Reviews.Any(r => r.BusinessId == businessId);
+            if (!hasReviews) return 5.0;
+            var average = _context.Reviews.Where(r => r.BusinessId == businessId).Average(r => r.Rating);
+            return Math.Round(average, 1);
         }
 
-        // GET: api/Businesses
-        // Метод доступен без авторизации, чтобы гости на главной могли видеть список филиалов (при масштабировании)
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<Business>>> GetBusinesses()
+        public async Task<ActionResult<IEnumerable<object>>> GetBusinesses()
         {
-            return await _context.Businesses.AsNoTracking().ToListAsync();
+            var businesses = await _context.Businesses.ToListAsync();
+            var result = businesses.Select(b => new {
+                id = b.Id,
+                name = b.Name,
+                address = b.Address,
+                ownerId = b.OwnerId,
+                logoUrl = b.LogoUrl,
+                description = b.Description,
+                workingHours = b.WorkingHours,
+                phone = b.Phone,
+                interiorPhotos = b.InteriorPhotos,
+                rating = CalculateSalonRating(b.Id)
+            });
+            return Ok(result);
         }
 
-        // --- ИСПРАВЛЕНО: Избегаем циклической ссылки (Circular Reference) через плоский анонимный объект ---
-        // GET: api/Businesses/5
         [HttpGet("{id}")]
-        [AllowAnonymous] // ИСПРАВЛЕНО: Теперь витрина салона доступна гостям сайта БЕЗ авторизации!
-        public async Task<IActionResult> GetBusiness(int id)
+        [AllowAnonymous]
+        public async Task<ActionResult<object>> GetBusiness(int id)
         {
-            var businessDto = await _context.Businesses
-                .AsNoTracking()
-                .Where(b => b.Id == id)
-                .Select(b => new
-                {
-                    b.Id,
-                    b.Name,
-                    b.Address,
-                    b.OwnerId,
-                    b.LogoUrl,
-                    b.Phone,
-                    b.Description,
-                    b.WorkingHours,
-                    b.WorkingDays,
-                    b.SocialLinks,
-                    b.InteriorPhotos
-                })
-                .FirstOrDefaultAsync();
-
-            if (businessDto == null)
+            var business = await _context.Businesses.FindAsync(id);
+            if (business == null) return NotFound("Салон красоты не найден в базе CRM.");
+            var result = new
             {
-                return NotFound("Салон или филиал бизнеса не найден.");
-            }
-
-            return Ok(businessDto);
+                id = business.Id,
+                name = business.Name,
+                address = business.Address,
+                ownerId = business.OwnerId,
+                logoUrl = business.LogoUrl,
+                description = business.Description,
+                workingHours = business.WorkingHours,
+                phone = business.Phone,
+                interiorPhotos = business.InteriorPhotos,
+                rating = CalculateSalonRating(business.Id)
+            };
+            return Ok(result);
         }
 
-
-        // GET: api/Businesses/by-category?category=hair
         [HttpGet("by-category")]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<object>>> GetBusinessesByCategory([FromQuery] string category)
         {
-            if (string.IsNullOrEmpty(category))
-            {
-                return BadRequest("Категория не указана.");
-            }
-
-            var searchKey = category.ToLower().Trim();
-            var keywords = new List<string>();
-
-            // 1. Настраиваем список ключевых слов (как и раньше)
-            if (searchKey.Contains("hair") || searchKey.Contains("парикмахер") || searchKey.Contains("волос") || searchKey.Contains("стриж") || searchKey.Contains("barber") || searchKey.Contains("барбер"))
-            {
-                keywords.AddRange(new[] { "стрижка", "окрашивание", "укладка", "волос", "прическа", "борода", "hair", "бритье" });
-            }
-            else if (searchKey.Contains("nail") || searchKey.Contains("ногт") || searchKey.Contains("маникюр") || searchKey.Contains("педикюр"))
-            {
-                keywords.AddRange(new[] { "маникюр", "педикюр", "ногт", "гель-лак", "наращивание", "nail", "шеллак" });
-            }
-            else if (searchKey.Contains("brow") || searchKey.Contains("ресниц") || searchKey.Contains("бров") || searchKey.Contains("lash"))
-            {
-                keywords.AddRange(new[] { "бров", "ресниц", "ламинирование", "макияж", "brow", "lash", "визаж" });
-            }
-            else if (searchKey.Contains("cosmetology") || searchKey.Contains("космет") || searchKey.Contains("лиц") || searchKey.Contains("уход") || searchKey.Contains("spa") || searchKey.Contains("массаж"))
-            {
-                keywords.AddRange(new[] { "пилинг", "чистка", "массаж", "косметолог", "маска", "уход", "spa", "срa" });
-            }
-
-            if (keywords.Count == 0)
-            {
-                keywords.Add(searchKey);
-            }
-
-            // 2. ИСПРАВЛЕНО: Скачиваем данные салонов и их услуг, разделяя запрос на простой SQL
-            var allBusinesses = await _context.Businesses
-                .AsNoTracking()
-                .Select(b => new
-                {
-                    b.Id,
-                    b.Name,
-                    b.Address,
-                    b.Phone,
-                    b.Description,
-                    b.WorkingHours,
-                    LogoUrl = b.LogoUrl ?? "",
-                    // Вытаскиваем список названий всех услуг этого салона в виде плоского массива строк
-                    ServiceNames = _context.Services
-                        .Where(s => s.BusinessId == b.Id)
-                        .Select(s => s.Name.ToLower())
-                        .ToList()
-                })
-                .ToListAsync();
-
-            // 3. ИСПРАВЛЕНО: Фильтруем данные в памяти сервера (In-Memory), что исключает ошибки трансляции LINQ!
-            var filteredBusinesses = allBusinesses
-                .Where(b => b.ServiceNames.Any(serviceName =>
-                    keywords.Any(kw => serviceName.Contains(kw))
-                ))
-                .Select(b => new
-                {
-                    b.Id,
-                    b.Name,
-                    b.Address,
-                    b.Phone,
-                    b.Description,
-                    b.WorkingHours,
-                    b.LogoUrl
-                })
-                .ToList();
-
-            return Ok(filteredBusinesses);
-        }
-
-
-
-        // PUT: api/Businesses/5
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Owner,Admin")] // Редактировать данные салона может только Владелец или Администратор
-        public async Task<IActionResult> PutBusiness(int id, [FromBody] Business business)
-        {
-            if (id != business.Id)
-            {
-                return BadRequest("Идентификатор бизнеса не совпадает с параметрами запроса.");
-            }
-
-            var existingBusiness = await _context.Businesses.FindAsync(id);
-            if (existingBusiness == null)
-            {
-                return NotFound("Запись о бизнесе для обновления не найдена в системе.");
-            }
-
-            // Явно переносим новые расширенные поля из payload фронтенда
-            existingBusiness.Name = business.Name;
-            existingBusiness.Address = business.Address;
-            existingBusiness.Phone = business.Phone;
-            existingBusiness.Description = business.Description;
-            existingBusiness.WorkingHours = business.WorkingHours;
-            existingBusiness.WorkingDays = business.WorkingDays;
-            existingBusiness.SocialLinks = business.SocialLinks;
-
             try
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!BusinessExists(id))
+                if (string.IsNullOrEmpty(category)) return BadRequest("Категория не указана.");
+                var allBusinesses = await _context.Businesses.ToListAsync();
+                if (category.ToLower() == "all" || !allBusinesses.Any())
                 {
-                    return NotFound();
+                    var allResult = allBusinesses.Select(b => new { id = b.Id, name = b.Name, address = b.Address, ownerId = b.OwnerId, logoUrl = b.LogoUrl, description = b.Description, workingHours = b.WorkingHours, phone = b.Phone, interiorPhotos = b.InteriorPhotos, rating = CalculateSalonRating(b.Id) });
+                    return Ok(allResult);
                 }
-                else
+                var employees = await _context.Emploees.ToListAsync();
+                var filteredBusinesses = allBusinesses.Where(b => employees.Any(e => e.BusinessId == b.Id && ((e.JobTitle != null && e.JobTitle.ToLower().Contains(category.ToLower())) || (e.EmployeeServices != null && e.EmployeeServices.ToLower().Contains(category.ToLower()))))).ToList();
+                if (!filteredBusinesses.Any())
                 {
-                    throw;
+                    filteredBusinesses = allBusinesses.Where(b => (b.Description != null && b.Description.ToLower().Contains(category.ToLower())) || (b.Name != null && b.Name.ToLower().Contains(category.ToLower()))).ToList();
                 }
+                if (!filteredBusinesses.Any()) filteredBusinesses = allBusinesses;
+                var result = filteredBusinesses.Select(b => new { id = b.Id, name = b.Name, address = b.Address, ownerId = b.OwnerId, logoUrl = b.LogoUrl, description = b.Description, workingHours = b.WorkingHours, phone = b.Phone, interiorPhotos = b.InteriorPhotos, rating = CalculateSalonRating(b.Id) });
+                return Ok(result);
             }
+            catch (Exception ex) { return BadRequest($"Ошибка сервера: {ex.Message}"); }
+        }
+        [HttpPost]
+        [Authorize(Roles = "Owner,Admin")]
+        public async Task<ActionResult<Business>> PostBusiness(Business business)
+        {
+            _context.Businesses.Add(business);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetBusiness", new { id = business.Id }, business);
+        }
 
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Owner,Admin")]
+        public async Task<IActionResult> PutBusiness(int id, Business business)
+        {
+            if (id != business.Id) return BadRequest("Несоответствие ID салона.");
+            _context.Entry(business).State = EntityState.Modified;
+            try { await _context.SaveChangesAsync(); }
+            catch (DbUpdateConcurrencyException) { if (!BusinessExists(id)) return NotFound(); else throw; }
             return NoContent();
         }
 
-        // POST: api/Businesses
-        [HttpPost]
-        [Authorize(Roles = "Admin")] // Только супер-администратор платформы может создавать корневой бизнес вручную
-        public async Task<ActionResult<Business>> PostBusiness([FromBody] Business business)
-        {
-            if (string.IsNullOrEmpty(business.Name))
-            {
-                return BadRequest("Название организации обязательно для заполнения.");
-            }
-
-            _context.Businesses.Add(business);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetBusiness), new { id = business.Id }, business);
-        }
-
-        // DELETE: api/Businesses/5
         [HttpDelete("{id}")]
         [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> DeleteBusiness(int id)
         {
             var business = await _context.Businesses.FindAsync(id);
-            if (business == null)
-            {
-                return NotFound("Организация для удаления не найдена.");
-            }
-
-            // ПРОВЕРКА ЦЕЛОСТНОСТИ: Запрещаем удаление, если к салону привязаны мастера
+            if (business == null) return NotFound("Организация для удаления не найдена.");
             bool hasEmployees = await _context.Emploees.AnyAsync(e => e.BusinessId == id);
-            if (hasEmployees)
-            {
-                return BadRequest("Невозможно удалить филиал, так как в базе данных к нему привязаны сотрудники салона.");
-            }
-
+            if (hasEmployees) return BadRequest("Невозможно удалить филиал, так как к нему привязаны сотрудники.");
             _context.Businesses.Remove(business);
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
 
-        // --- ЗАГРУЗКА ЛОГОТИПА/ФОТО САЛОНА ---
-        // POST: api/Businesses/upload-logo/5
         [HttpPost("upload-logo/{id}")]
         [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> UploadLogo(int id, IFormFile file)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("Файл не выбран для загрузки.");
-
+            if (file == null || file.Length == 0) return BadRequest("Файл не выбран.");
             var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/salons");
-            if (!Directory.Exists(uploadsPath))
-                Directory.CreateDirectory(uploadsPath);
-
+            if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
             var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            var filePath = Path.Combine(uploadsPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            // Находим салон
+            using (var stream = new FileStream(Path.Combine(uploadsPath, fileName), FileMode.Create)) { await file.CopyToAsync(stream); }
             var business = await _context.Businesses.FindAsync(id);
-            if (business == null)
-                return NotFound("Салон для обновления фото не найден.");
-
+            if (business == null) return NotFound("Салон не найден.");
             business.LogoUrl = $"/uploads/salons/{fileName}";
             await _context.SaveChangesAsync();
-
             return Ok(new { url = business.LogoUrl });
         }
 
-        // --- ЗАГРУЗКА ФОТОГРАФИЙ ИНТЕРЬЕРА В МАССИВ ---
-        // POST: api/Businesses/upload-interior/5
         [HttpPost("upload-interior/{id}")]
         [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> UploadInterior(int id, IFormFile file)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("Файл не выбран для загрузки.");
-
+            if (file == null || file.Length == 0) return BadRequest("Файл не выбран.");
             var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/interiors");
-            if (!Directory.Exists(uploadsPath))
-                Directory.CreateDirectory(uploadsPath);
-
+            if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
             var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            var filePath = Path.Combine(uploadsPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
+            using (var stream = new FileStream(Path.Combine(uploadsPath, fileName), FileMode.Create)) { await file.CopyToAsync(stream); }
             var business = await _context.Businesses.FindAsync(id);
-            if (business == null)
-                return NotFound("Салон для добавления интерьера не найден.");
-
-            // Инициализируем список, если он пуст
-            if (business.InteriorPhotos == null)
-            {
-                business.InteriorPhotos = new List<string>();
-            }
-
+            if (business == null) return NotFound("Салон не найден.");
+            if (business.InteriorPhotos == null) business.InteriorPhotos = new List<string>();
             var fileUrl = $"/uploads/interiors/{fileName}";
             business.InteriorPhotos.Add(fileUrl);
-
-            // Помечаем объект измененным для корректной записи List<string> (массив строк) в БД PostgreSQL
             _context.Entry(business).State = EntityState.Modified;
             await _context.SaveChangesAsync();
-
             return Ok(new { url = fileUrl });
         }
 
-        // DELETE: api/Businesses/delete-interior/5?photoUrl=/uploads/interiors/file.jpg
         [HttpDelete("delete-interior/{id}")]
         [Authorize(Roles = "Owner,Admin")]
         public async Task<IActionResult> DeleteInterior(int id, [FromQuery] string photoUrl)
         {
-            if (string.IsNullOrEmpty(photoUrl)) return BadRequest("Путь к фото не указан.");
-
+            if (string.IsNullOrEmpty(photoUrl)) return BadRequest("Путь не указан.");
             var business = await _context.Businesses.FindAsync(id);
             if (business == null) return NotFound("Салон не найден.");
-
             if (business.InteriorPhotos != null && business.InteriorPhotos.Contains(photoUrl))
             {
-                // 1. Удаляем запись из массива в БД
                 business.InteriorPhotos.Remove(photoUrl);
                 _context.Entry(business).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
-
-                // 2. Безопасно удаляем файл с диска сервера
                 var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", photoUrl.TrimStart('/'));
-                if (System.IO.File.Exists(fullPath))
-                {
-                    System.IO.File.Delete(fullPath);
-                }
-
-                return Ok(new { message = "Фото интерьера успешно удалено" });
+                if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
+                return Ok(new { message = "Успешно удалено" });
             }
-
-            return BadRequest("Указанное фото не найдено в галерее салона.");
+            return BadRequest("Фото не найдено.");
         }
 
-
-        private bool BusinessExists(int id)
-        {
-            return _context.Businesses.Any(e => e.Id == id);
-        }
+        private bool BusinessExists(int id) { return _context.Businesses.Any(e => e.Id == id); }
     }
 }
