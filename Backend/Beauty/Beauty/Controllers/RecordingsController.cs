@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Beauty.Models;
 using Microsoft.AspNetCore.Authorization;
+using Beauty.Services; // Connect service references
 
 namespace Beauty.Controllers
 {
@@ -14,26 +15,29 @@ namespace Beauty.Controllers
     public class RecordingsController : ControllerBase
     {
         private readonly BeautySalonContext _context;
+        private readonly Beauty.Services.EmailService _emailService; // ДОБАВЛЕНО: Ссылка на сервис отправки почты
 
-        public RecordingsController(BeautySalonContext context)
+        // ИСПРАВЛЕНО: Теперь конструктор принимает и базу данных, и почтовый сервис для отправки писем клиентам!
+        public RecordingsController(BeautySalonContext context, Beauty.Services.EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
-       
-        // GET: api/Recordings
+        // GET: api/Recordings (СОХРАНЕНО: Твой метод просмотра журнала записей мастерами и админом)
         [HttpGet]
-        [Authorize] // Позволяет админу и мастерам просматривать журнал
+        [Authorize]
         public async Task<ActionResult<IEnumerable<Recording>>> GetRecordings()
         {
             return await _context.Recordings
                 .AsNoTracking()
-                .Include(r => r.Client)   // Вытягиваем имя и телефон клиента
-                .Include(r => r.Emploee) // Вытягиваем мастера, к которому записаны
-                .Include(r => r.Service) // Вытягиваем цену и длительность процедуры
+                .Include(r => r.Client)
+                .Include(r => r.Emploee)
+                .Include(r => r.Service)
                 .OrderBy(r => r.AppointmentTime)
                 .ToListAsync();
         }
+
 
 
         // GET: api/Recordings/5
@@ -189,7 +193,7 @@ namespace Beauty.Controllers
         [Authorize]
         public async Task<ActionResult<Recording>> PostRecording(Recording recording)
         {
-            // 1. ИСПРАВЛЕНО: Жёсткая проверка на существование клиента (защита от удалений через pgAdmin)
+            // 1. Жёсткая проверка на существование клиента (защита от удалений через pgAdmin)
             var client = await _context.Clients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == recording.ClientId);
             if (client == null)
             {
@@ -211,7 +215,7 @@ namespace Beauty.Controllers
             var dayStart = newStart.Date;
             var dayEnd = dayStart.AddDays(1);
 
-            // Безопасно получаем записи на день без лишних инклудов, чтобы не падать из-за старых битых данных
+            // Безопасно получаем записи на день без лишних инклудов
             var singleDayRecordings = await _context.Recordings
                 .Where(r => r.Status != "Cancelled"
                             && r.AppointmentTime >= dayStart
@@ -220,7 +224,7 @@ namespace Beauty.Controllers
                 .AsNoTracking()
                 .ToListAsync();
 
-            // 1. Проверяем, свободен ли мастер
+            // Проверяем, свободен ли мастер
             bool isMasterBusy = singleDayRecordings.Any(r =>
                 r.EmploeeId == recording.EmploeeId &&
                 newStart < r.AppointmentTime.Add(r.Service!.Duration + (r.Service.BreakAfterRecording ?? TimeSpan.Zero)) &&
@@ -232,7 +236,7 @@ namespace Beauty.Controllers
                 return BadRequest("Выбранный временной слот уже занят другим клиентом.");
             }
 
-            // 2. Проверяем, свободен ли сам клиент в это время
+            // Проверяем, свободен ли сам клиент в это время
             bool isClientBusy = singleDayRecordings.Any(r =>
                 r.ClientId == recording.ClientId &&
                 r.Service != null &&
@@ -248,20 +252,51 @@ namespace Beauty.Controllers
             recording.AppointmentTime = newStart;
             recording.Status = "Scheduled";
 
-            // 2. ИСПРАВЛЕНО: Заворачиваем сохранение в try-catch, чтобы поймать скрытые ошибки базы данных
             try
             {
                 _context.Recordings.Add(recording);
                 await _context.SaveChangesAsync();
+
+                // ==========================================
+                // ИСПРАВЛЕНО: ИНТЕГРАЦИЯ АВТОМАТИЧЕСКОЙ ОТПРАВКИ EMAIL КЛИЕНТУ!
+                // ==========================================
+                // 1. Вытягиваем из базы связанные данные для подстановки в HTML-шаблон письма
+                var employee = await _context.Emploees.AsNoTracking().FirstOrDefaultAsync(e => e.Id == recording.EmploeeId);
+                var business = await _context.Businesses.AsNoTracking().FirstOrDefaultAsync(b => b.Id == (employee != null ? employee.BusinessId : 0));
+
+                // 2. Ищем почту клиента в таблице users по linked_id (который равен ClientId)
+                var userAccount = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Role == "Client" && u.LinkedId == recording.ClientId);
+
+                if (userAccount != null && !string.IsNullOrEmpty(userAccount.Email))
+                {
+                    // Запускаем отправку в фоновом потоке, чтобы фронтенд React не зависал в ожидании ответа от Mail.ru/Yandex
+                    _ = Task.Run(async () =>
+                    {
+                        await _emailService.SendBookingConfirmationAsync(
+                            toEmail: userAccount.Email, // Шлём на реальную почту авторизованного клиента!
+                            clientName: client?.Name ?? "Клиент",
+                            salonName: business?.Name ?? "Наш бьюти-салон",
+                            masterName: employee?.Name ?? "Специалист",
+                            serviceName: service?.Name ?? "Процедура",
+                            appointmentTime: recording.AppointmentTime,
+                            salonAddress: business?.Address ?? "Указанный адрес филиала"
+                        );
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[CRM NOTICE] Отправка пропущена: у клиента с ID {recording.ClientId} не заполнено поле Email в таблице users.");
+                }
+                // ==========================================
             }
             catch (Exception ex)
             {
-                // Если база данных ругается на связи (например, указан неверный MasterId/ClientId), мы увидим это на фронтенде
                 return BadRequest($"Ошибка базы данных при сохранении записи: {ex.InnerException?.Message ?? ex.Message}");
             }
 
             return CreatedAtAction("GetRecording", new { id = recording.Id }, recording);
         }
+
 
 
         // PUT: api/Recordings/5

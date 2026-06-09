@@ -54,6 +54,10 @@ builder.Services.AddAuthentication(x =>
     };
 });
 
+// Register the automated email notification service container
+builder.Services.AddScoped<Beauty.Services.EmailService>();
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
