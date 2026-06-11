@@ -84,6 +84,14 @@ export default function AdminPage() {
   const [editServiceForm] = Form.useForm();
   const [recordForm] = Form.useForm();
   const [clientForm] = Form.useForm();
+  // ==========================================
+  // ДОБАВЛЕНО: Стейты и формы для рекламного модуля салона
+  // ==========================================
+  const [salonAds, setSalonAds] = useState<any[]>([]); // Баннеры этого салона из pgAdmin
+  const [loadingAdUpload, setLoadingAdUpload] = useState(false); // Лоадер загрузки картинки
+  const [uploadedAdImageUrl, setUploadedAdImageUrl] = useState(""); // Путь к картинке баннера
+  const [adForm] = Form.useForm(); // Форма создания новой рекламы
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const bId = localStorage.getItem("businessId");
@@ -165,6 +173,8 @@ export default function AdminPage() {
         );
       }
       fetchEmployees();
+      fetchSalonAdvertisements();
+
       await fetchClients();
       await fetchAllRecordings();
     } catch {
@@ -506,6 +516,106 @@ export default function AdminPage() {
       message.error("Ошибка создания клиента");
     }
   };
+  // ==========================================
+  // ДОБАВЛЕНО: Обработчики запросов рекламного кабинета салона
+  // ==========================================
+
+  // 1. Автоматическая подгрузка рекламы салона при входе в ЛК
+  const fetchSalonAdvertisements = () => {
+    if (!bId || bId === "0") return;
+    axios
+      .get(`${baseUrl}/api/Advertisements/salon/${bId}`)
+      .then((res) => setSalonAds(res.data || []))
+      .catch(() =>
+        message.error("Не удалось обновить журнал рекламных кампаний"),
+      );
+  };
+
+  // Вызовем эту функцию внутри твоего существующего fetchAllData()!
+  // Просто найди fetchEmployees(); внутри fetchAllData и пропиши под ним: fetchSalonAdvertisements();
+
+  // 2. Фоновое сохранение загруженной картинки рекламы
+  const handleAdImageChange = (info: any) => {
+    if (info.file.status === "uploading") {
+      setLoadingAdUpload(true);
+      return;
+    }
+    if (
+      info.file.status === "done" ||
+      (info.file.response && info.file.response.url)
+    ) {
+      const serverPath = info.file.response.url;
+      setUploadedAdImageUrl(serverPath); // Запоминаем путь для базы данных
+      setLoadingAdUpload(false);
+      message.success("Изображение баннера загружено на сервер!");
+    } else if (info.file.status === "error") {
+      setLoadingAdUpload(false);
+      message.error("Ошибка при загрузке рекламного изображения");
+    }
+  };
+
+  // 3. Отправка формы запуска новой бесплатной рекламы
+  const handleCreateAd = async (values: any) => {
+    if (!uploadedAdImageUrl) {
+      message.warning(
+        "Пожалуйста, сначала загрузите файл изображения для баннера!",
+      );
+      return;
+    }
+    try {
+      const payload = {
+        businessId: parseInt(bId || "0"),
+        title: values.title,
+        imageUrl: uploadedAdImageUrl,
+        targetUrl: values.targetUrl || "",
+        format: values.format, // 'LeftSidebar' или 'RightSidebar'
+        isActive: true,
+      };
+
+      await axios.post(`${baseUrl}/api/Advertisements`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      message.success("Тестовый рекламный баннер успешно запущен!");
+      adForm.resetFields();
+      setUploadedAdImageUrl("");
+      fetchSalonAdvertisements(); // Перечитываем таблицу
+    } catch {
+      message.error("Ошибка при создании рекламного объявления");
+    }
+  };
+
+  // 4. Мгновенное включение/выключение баннера кнопкой из таблицы
+  const handleToggleAd = async (id: number) => {
+    try {
+      await axios.patch(
+        `${baseUrl}/api/Advertisements/toggle/${id}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      message.success("Статус показа баннера на платформе обновлен!");
+      fetchSalonAdvertisements();
+    } catch {
+      message.error("Не удалось переключить активность баннера");
+    }
+  };
+
+  // 5. Полное удаление баннера из базы CRM
+  const handleDeleteAd = async (id: number) => {
+    try {
+      await axios.delete(`${baseUrl}/api/Advertisements/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      message.success("Рекламное объявление удалено.");
+      fetchSalonAdvertisements();
+    } catch {
+      message.error("Ошибка удаления кампании");
+    }
+  };
+  // ==========================================
+
   const employeeColumns = [
     {
       title: "Фото",
@@ -886,6 +996,218 @@ export default function AdminPage() {
                 </Row>
               ),
             },
+            // ==========================================
+            // ДОБАВЛЕНО: Новый рекламный кабинет салона (Вкладка №2)
+            // ==========================================
+            {
+              key: "advertisements_tab",
+              label: (
+                <span>
+                  <GlobalOutlined />
+                  Реклама
+                </span>
+              ),
+              children: (
+                <Row gutter={[24, 24]} style={{ marginTop: 15 }}>
+                  {/* Левая колонка: Форма запуска нового бесплатного баннера */}
+                  <Col xs={24} lg={10}>
+                    <Card
+                      title="🚀 Запустить промо-кампанию"
+                      style={{ borderRadius: 12 }}
+                    >
+                      <Form
+                        form={adForm}
+                        layout="vertical"
+                        onFinish={handleCreateAd}
+                      >
+                        <Form.Item
+                          name="title"
+                          label="Заголовок (текст акции)"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Введите текст спецпредложения",
+                            },
+                          ]}
+                        >
+                          <Input
+                            placeholder="Например: Маникюр + Скидка 20% на дизайн!"
+                            size="large"
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          name="format"
+                          label="Место размещения на платформе"
+                          rules={[
+                            { required: true, message: "Выберите тип баннера" },
+                          ]}
+                        >
+                          <Select
+                            placeholder="Выберите зону показа рекламы"
+                            size="large"
+                          >
+                            <Option value="LeftSidebar">
+                              Левый боковой сайдбар страниц
+                            </Option>
+                            <Option value="RightSidebar">
+                              Правый боковой сайдбар страниц
+                            </Option>
+                          </Select>
+                        </Form.Item>
+
+                        <Form.Item
+                          name="targetUrl"
+                          label="Ссылка при клике (необязательно)"
+                        >
+                          <Input
+                            placeholder="Например: /salons?category=nails"
+                            size="large"
+                          />
+                        </Form.Item>
+
+                        <Form.Item label="Изображение баннера" required>
+                          <Upload
+                            name="file"
+                            listType="picture-card"
+                            showUploadList={false}
+                            action={`${baseUrl}/api/Advertisements/upload-image/${bId}`}
+                            headers={{ Authorization: `Bearer ${token}` }}
+                            onChange={handleAdImageChange}
+                          >
+                            {uploadedAdImageUrl ? (
+                              <img
+                                src={`${baseUrl}${uploadedAdImageUrl}`}
+                                alt="ad-banner"
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  borderRadius: 8,
+                                }}
+                              />
+                            ) : (
+                              <div>
+                                {loadingAdUpload ? (
+                                  <LoadingOutlined />
+                                ) : (
+                                  <PlusOutlined />
+                                )}
+                                <div style={{ marginTop: 8 }}>
+                                  Загрузить фото
+                                </div>
+                              </div>
+                            )}
+                          </Upload>
+                        </Form.Item>
+
+                        <Button
+                          type="primary"
+                          htmlType="submit"
+                          block
+                          size="large"
+                          icon={<PlusCircleOutlined />}
+                          style={{
+                            background: "#059669",
+                            border: "none",
+                            height: 45,
+                            fontWeight: 700,
+                          }}
+                        >
+                          Запустить бесплатно!
+                        </Button>
+                      </Form>
+                    </Card>
+                  </Col>
+
+                  {/* Правая колонка: Таблица текущих объявлений */}
+                  <Col xs={24} lg={14}>
+                    <Card
+                      title="📊 Мои рекламные объявления"
+                      style={{ borderRadius: 12 }}
+                    >
+                      <Table
+                        dataSource={salonAds}
+                        rowKey="id"
+                        pagination={{ pageSize: 4 }}
+                        size="small"
+                        columns={[
+                          {
+                            title: "Баннер",
+                            dataIndex: "imageUrl",
+                            key: "img",
+                            width: 70,
+                            render: (url) => (
+                              <img
+                                src={`${baseUrl}${url}`}
+                                alt="ad"
+                                style={{
+                                  width: 45,
+                                  height: 45,
+                                  borderRadius: 8,
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ),
+                          },
+                          {
+                            title: "Текст акции",
+                            dataIndex: "title",
+                            key: "title",
+                            render: (t) => <strong>{t}</strong>,
+                          },
+                          {
+                            title: "Формат",
+                            dataIndex: "format",
+                            key: "format",
+                            render: (f) =>
+                              f === "LeftSidebar" ? (
+                                <Tag color="blue">Левый сайдбар</Tag>
+                              ) : (
+                                <Tag color="purple">Правый сайдбар</Tag>
+                              ),
+                          },
+                          {
+                            title: "Статус",
+                            dataIndex: "isActive",
+                            key: "status",
+                            render: (active, adRecord) => (
+                              <Button
+                                size="small"
+                                type={active ? "primary" : "default"}
+                                danger={!active}
+                                onClick={() => handleToggleAd(adRecord.id)}
+                              >
+                                {active ? "Активен" : "Выключен"}
+                              </Button>
+                            ),
+                          },
+                          {
+                            title: "Удалить",
+                            key: "delete",
+                            width: 60,
+                            render: (_, adRecord) => (
+                              <Popconfirm
+                                title="Удалить это объявление?"
+                                onConfirm={() => handleDeleteAd(adRecord.id)}
+                              >
+                                <Button
+                                  type="primary"
+                                  danger
+                                  size="small"
+                                  icon={<DeleteOutlined />}
+                                />
+                              </Popconfirm>
+                            ),
+                          },
+                        ]}
+                      />
+                    </Card>
+                  </Col>
+                </Row>
+              ),
+            },
+
             {
               key: "2",
               label: (
@@ -1860,6 +2182,7 @@ export default function AdminPage() {
             </Row>
           </Form>
         </Modal>
+
         <Modal
           title="Новый клиент"
           open={isClientModalOpen}

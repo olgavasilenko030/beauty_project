@@ -22,6 +22,8 @@ public partial class BeautySalonContext : DbContext
     public virtual DbSet<Service> Services { get; set; }
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<Beauty.Models.Review> Reviews { get; set; }
+    public virtual DbSet<Advertisement> Advertisements { get; set; }
+
 
 
 
@@ -167,6 +169,21 @@ public partial class BeautySalonContext : DbContext
             entity.Property(e => e.Rating).HasColumnName("Rating");
             entity.Property(e => e.Comment).HasColumnName("Comment");
             entity.Property(e => e.ClientName).HasColumnName("ClientName");
+            entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
+        });
+
+        modelBuilder.Entity<Advertisement>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("Advertisements_pkey");
+            entity.ToTable("Advertisements");
+
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn().HasColumnName("Id");
+            entity.Property(e => e.BusinessId).HasColumnName("BusinessId");
+            entity.Property(e => e.Title).HasColumnName("Title");
+            entity.Property(e => e.ImageUrl).HasColumnName("ImageUrl");
+            entity.Property(e => e.TargetUrl).HasColumnName("TargetUrl");
+            entity.Property(e => e.Format).HasColumnName("Format");
+            entity.Property(e => e.IsActive).HasColumnName("IsActive");
             entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
         });
 
