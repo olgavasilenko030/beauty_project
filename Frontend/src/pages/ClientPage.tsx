@@ -1,4 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
+import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import {
   Layout,
   Typography,
@@ -20,8 +24,6 @@ import {
   Rate,
   Input,
 } from "antd";
-import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import {
   LogoutOutlined,
   SettingOutlined,
@@ -37,11 +39,11 @@ import {
   ClockCircleOutlined,
   PhoneOutlined,
 } from "@ant-design/icons";
-import type { Dayjs } from "dayjs";
 
-const { Header, Content } = Layout;
+const { Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { confirm } = Modal;
+const { CheckableTag } = Tag; // Безопасный импорт компонента из библиотеки AntD
 
 interface Master {
   id: number;
@@ -52,6 +54,7 @@ interface Master {
   businessId: number;
   portfolioPhotos?: string[];
 }
+
 interface Business {
   id: number;
   name: string;
@@ -64,41 +67,6 @@ interface Business {
   socialLinks?: string;
   interiorPhotos?: string[];
 }
-
-const BASE_URL = "https://localhost:7164";
-const categories = [
-  { id: "all", name: "Все услуги", img: "https://unsplash.com" },
-  {
-    id: "hair",
-    name: "Парикмахерские услуги",
-    img: `${BASE_URL}/uploads/categories/hair.jpg`,
-  },
-  {
-    id: "nails",
-    name: "Ногтевой сервис",
-    img: `${BASE_URL}/uploads/categories/nails.jpg`,
-  },
-  {
-    id: "brows",
-    name: "Ресницы & Брови",
-    img: `${BASE_URL}/uploads/categories/brows.jpg`,
-  },
-  {
-    id: "barber",
-    name: "Барбершоп",
-    img: `${BASE_URL}/uploads/categories/barber.jpg`,
-  },
-  {
-    id: "cosmetology",
-    name: "Косметология",
-    img: `${BASE_URL}/uploads/categories/cosmetology.jpg`,
-  },
-  {
-    id: "massage",
-    name: "Массаж & SPA",
-    img: `${BASE_URL}/uploads/categories/massage.jpg`,
-  },
-];
 export default function ClientPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -136,78 +104,41 @@ export default function ClientPage() {
   const { autoBusinessId, autoMasterId, autoServiceId } = location.state || {};
 
   const [ads, setAds] = useState<any[]>([]);
+  const [allServices, setAllServices] = useState<any[]>([]); // ДОБАВЛЕНО: Списочный стейт всех услуг для фильтрации
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-    axios
-      .get(`${baseUrl}/api/Businesses`)
-      .then((res) => setBusinesses(res.data))
-      .catch(() => message.error("Не удалось загрузить салоны"));
-
-    axios
-      .get(`${baseUrl}/api/Employees`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        setMasters(res.data);
-        if (autoBusinessId) {
-          setSelectedBusinessId(autoBusinessId);
-          if (autoMasterId) {
-            const targetMaster = res.data.find(
-              (m: any) => m.id === autoMasterId,
-            );
-            if (targetMaster) {
-              axios
-                .get(`${baseUrl}/api/Services?employeeId=${targetMaster.id}`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                })
-                .then((sRes) => {
-                  setServices(sRes.data);
-                  setSelectedMaster(targetMaster);
-                  setIsModalOpen(true);
-                  form.setFieldsValue({
-                    serviceId: autoServiceId || undefined,
-                  });
-                });
-            }
-          }
-        }
-      })
-      .catch(() => message.error("Не удалось загрузить список мастеров"));
-
-    // ==========================================
-    // ДОБАВЛЕНО: Скачивание активных рекламных баннеров для ЛК клиента
-    // ==========================================
-    axios
-      .get(`${baseUrl}/api/Advertisements/active`)
-      .then((res) => setAds(res.data || []))
-      .catch((err) => {
-        console.error("Ошибка загрузки рекламы в ЛК клиента", err);
-        setAds([]); // Резервный пустой массив, чтобы страница не падала
-      });
-    // ==========================================
-  }, [navigate, token, autoBusinessId, autoMasterId, autoServiceId]);
-
-  useEffect(() => {
-    if (selectedMaster && formServiceId && formDate) {
-      setLoadingSlots(true);
-      setSelectedSlot(null);
-      const formattedDate = (formDate as Dayjs).format("YYYY-MM-DD");
-      axios
-        .get(
-          `${baseUrl}/api/Recordings/slots?masterId=${selectedMaster.id}&serviceId=${formServiceId}&date=${formattedDate}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        .then((res) => setAvailableSlots(res.data))
-        .catch(() => message.error("Ошибка при расчете окон времени"))
-        .finally(() => setLoadingSlots(false));
-    } else {
-      setAvailableSlots([]);
-    }
-  }, [formServiceId, formDate, selectedMaster, token]);
+  const categories = [
+    { id: "all", name: "🚀 Все услуги", img: "" },
+    {
+      id: "hair",
+      name: "Парикмахерские услуги",
+      img: `${baseUrl}/uploads/categories/hair.jpg`,
+    },
+    {
+      id: "nails",
+      name: "Ногтевой сервис",
+      img: `${baseUrl}/uploads/categories/nails.jpg`,
+    },
+    {
+      id: "brows",
+      name: "Ресницы & Брови",
+      img: `${baseUrl}/uploads/categories/brows.jpg`,
+    },
+    {
+      id: "barber",
+      name: "Барбершоп",
+      img: `${baseUrl}/uploads/categories/barber.jpg`,
+    },
+    {
+      id: "cosmetology",
+      name: "Косметология",
+      img: `${baseUrl}/uploads/categories/cosmetology.jpg`,
+    },
+    {
+      id: "massage",
+      name: "Массаж & SPA",
+      img: `${baseUrl}/uploads/categories/massage.jpg`,
+    },
+  ];
 
   const fetchMyRecordings = () => {
     setLoadingRecordings(true);
@@ -215,10 +146,11 @@ export default function ClientPage() {
       .get(`${baseUrl}/api/Recordings/ForClient/${linkedId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setMyRecordings(res.data))
+      .then((res) => setMyRecordings(res.data || []))
       .catch(() => message.error("Ошибка при загрузке архива записей"))
       .finally(() => setLoadingRecordings(false));
   };
+
   const handleCancel = (id: number) => {
     confirm({
       title: "Вы уверены, что хотите отменить запись?",
@@ -244,18 +176,14 @@ export default function ClientPage() {
 
   const onFinishReview = async (values: any) => {
     if (!selectedRecordingId) return;
-
     const recording = myRecordings.find((r) => r.id === selectedRecordingId);
     if (!recording) return;
 
-    // Безопасное извлечение ID клиента: проверяем оба регистра в localStorage
     const savedId =
       localStorage.getItem("linkedId") ||
       localStorage.getItem("LinkedId") ||
       "0";
     const cleanClientId = parseInt(savedId, 10);
-
-    // Безопасное приведение ID салона к числу
     const rawBusinessId =
       recording.businessId ||
       recording.emploee?.businessId ||
@@ -263,12 +191,11 @@ export default function ClientPage() {
       0;
     const cleanBusinessId = parseInt(rawBusinessId.toString(), 10);
 
-    // ИСПРАВЛЕНО: JSON-ключи строго в camelCase, а типы полей — чистые валидные Integer для .NET Core
     const payload = {
       recordingId: parseInt(selectedRecordingId.toString(), 10),
       clientId: cleanClientId,
       businessId: cleanBusinessId,
-      rating: Math.round(values.rating || 5), // Округляем звезды до строгого int
+      rating: Math.round(values.rating || 5),
       comment: values.comment || "",
     };
 
@@ -276,19 +203,14 @@ export default function ClientPage() {
       await axios.post(`${baseUrl}/api/Reviews`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       message.success("Ваш отзыв успешно сохранен в базе данных CRM!");
       setIsReviewModalOpen(false);
       reviewForm.resetFields();
-      fetchMyRecordings(); // Перекачиваем список для обновления статуса
-    } catch (error) {
-      console.error("Ошибка сохранения отзыва", error);
-      message.error(
-        "Не удалось отправить отзыв на сервер. Проверьте заполнение полей.",
-      );
+      fetchMyRecordings();
+    } catch {
+      message.error("Не удалось отправить отзыв на сервер.");
     }
   };
-
   const openBooking = (master: Master) => {
     setSelectedMaster(master);
     setServices([]);
@@ -300,7 +222,7 @@ export default function ClientPage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
-        setServices(res.data);
+        setServices(res.data || []);
         setIsModalOpen(true);
       })
       .catch(() => message.error("Не удалось загрузить услуги мастера"));
@@ -331,10 +253,88 @@ export default function ClientPage() {
       message.success("Вы успешно записаны!");
       setIsModalOpen(false);
       form.resetFields();
+      fetchMyRecordings();
     } catch (error: any) {
       message.error(error.response?.data || "Ошибка при создании записи");
     }
   };
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    axios
+      .get(`${baseUrl}/api/Businesses`)
+      .then((res) => setBusinesses(res.data || []))
+      .catch(() => message.error("Не удалось загрузить salons"));
+
+    axios
+      .get(`${baseUrl}/api/Employees`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const allMasters = res.data || [];
+        setMasters(allMasters);
+        if (autoBusinessId) {
+          setSelectedBusinessId(autoBusinessId);
+          if (autoMasterId) {
+            const targetMaster = allMasters.find(
+              (m: any) => m.id === autoMasterId,
+            );
+            if (targetMaster) {
+              axios
+                .get(`${baseUrl}/api/Services?employeeId=${targetMaster.id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                .then((sRes) => {
+                  setServices(sRes.data || []);
+                  setSelectedMaster(targetMaster);
+                  setIsModalOpen(true);
+                  form.setFieldsValue({
+                    serviceId: autoServiceId || undefined,
+                    date: dayjs(),
+                  });
+                });
+            }
+          }
+        }
+      })
+      .catch(() => message.error("Не удалось загрузить список мастеров"));
+
+    axios
+      .get(`${baseUrl}/api/Advertisements/active`)
+      .then((res) => setAds(res.data || []))
+      .catch(() => setAds([]));
+
+    // ДОБАВЛЕНО: Скачиваем полный прайс-лист всех салонов для глубокой фильтрации по тексту услуг
+    axios
+      .get(`${baseUrl}/api/Services`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setAllServices(res.data || []))
+      .catch(() =>
+        console.error("Ошибка предзагрузки глобального прайса услуг"),
+      );
+  }, [navigate, token, autoBusinessId, autoMasterId, autoServiceId]);
+
+  useEffect(() => {
+    if (selectedMaster && formServiceId && formDate) {
+      setLoadingSlots(true);
+      setSelectedSlot(null);
+      const formattedDate = (formDate as Dayjs).format("YYYY-MM-DD");
+      axios
+        .get(
+          `${baseUrl}/api/Recordings/slots?masterId=${selectedMaster.id}&serviceId=${formServiceId}&date=${formattedDate}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        .then((res) => setAvailableSlots(res.data || []))
+        .catch(() => message.error("Ошибка при расчете окон времени"))
+        .finally(() => setLoadingSlots(false));
+    } else {
+      setAvailableSlots([]);
+    }
+  }, [formServiceId, formDate, selectedMaster, token]);
 
   const displayedMasters = selectedBusinessId
     ? masters.filter((m) => m.businessId === selectedBusinessId)
@@ -343,27 +343,111 @@ export default function ClientPage() {
     (b) => b.id === selectedBusinessId,
   );
 
-  // Фильтруем баннеры по форматам перед рендером
   const leftAds = ads ? ads.filter((a: any) => a.format === "LeftSidebar") : [];
   const rightAds = ads
     ? ads.filter((a: any) => a.format === "RightSidebar")
     : [];
 
+  // Живая фильтрация салонов по Названию и Тексту бьюти-процедур (name) из базы данных
+  const filteredBusinesses = businesses.filter((b: any) => {
+    if (!selectedCategoryId || selectedCategoryId === "all") return true;
+
+    const salonName = (b.name || "").toLowerCase();
+
+    // 1. Фильтр по названию самого салона (резервный)
+    if (
+      selectedCategoryId === "nails" &&
+      (salonName.includes("ногт") ||
+        salonName.includes("маник") ||
+        salonName.includes("пилк"))
+    )
+      return true;
+    if (
+      selectedCategoryId === "hair" &&
+      (salonName.includes("парик") ||
+        salonName.includes("стриж") ||
+        salonName.includes("стилист"))
+    )
+      return true;
+    if (
+      selectedCategoryId === "brows" &&
+      (salonName.includes("бров") ||
+        salonName.includes("ресн") ||
+        salonName.includes("взгляд"))
+    )
+      return true;
+    if (
+      selectedCategoryId === "barber" &&
+      (salonName.includes("барбер") || salonName.includes("barber"))
+    )
+      return true;
+
+    // 2. Глубокий фильтр: Ищем услуги текущего салона в общем прайсе allServices по полю name
+    const currentSalonServices = allServices.filter(
+      (s: any) => s.businessId === b.id || s.BusinessId === b.id,
+    );
+
+    return currentSalonServices.some((s: any) => {
+      const serviceName = (s.name || "").toLowerCase();
+
+      if (
+        selectedCategoryId === "nails" &&
+        (serviceName.includes("маник") ||
+          serviceName.includes("педик") ||
+          serviceName.includes("гель"))
+      )
+        return true;
+      if (
+        selectedCategoryId === "hair" &&
+        (serviceName.includes("стрижка") ||
+          serviceName.includes("окрашив") ||
+          serviceName.includes("укладка"))
+      )
+        return true;
+      if (
+        selectedCategoryId === "brows" &&
+        (serviceName.includes("брови") ||
+          serviceName.includes("ресниц") ||
+          serviceName.includes("ламин"))
+      )
+        return true;
+
+      // ВОТ ОНО! Строгая фильтрация барбершопа по бритью, бороде и мужским стрижкам
+      if (
+        selectedCategoryId === "barber" &&
+        (serviceName.includes("брить") || serviceName.includes("бород"))
+      )
+        return true;
+
+      if (
+        selectedCategoryId === "cosmetology" &&
+        (serviceName.includes("пилинг") ||
+          serviceName.includes("чистка") ||
+          serviceName.includes("лиц"))
+      )
+        return true;
+      if (
+        selectedCategoryId === "massage" &&
+        (serviceName.includes("массаж") ||
+          serviceName.includes("спа") ||
+          serviceName.includes("spa"))
+      )
+        return true;
+
+      return false;
+    });
+  });
+
   return (
-    <Layout
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%)",
-      }}
-    >
-      {/* Навигационная панель — Фиксирована на самом верху */}
+    <Layout style={{ minHeight: "100vh", background: "#fafafa" }}>
+      {/* ПРЕМИАЛЬНЫЙ ФИКСИРОВАННЫЙ ХЕДЕР */}
       <Header
         style={{
           background: "#fff",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderBottom: "2px solid #fef3c7",
+          borderBottom: "1px solid #f0f0f0",
           padding: "0 40px",
           height: "70px",
           position: "sticky",
@@ -383,14 +467,17 @@ export default function ClientPage() {
         >
           BEAUTY HUB
         </Title>
-        <Space>
+        <Space size="middle">
           <Button
+            type="dashed"
             icon={<SettingOutlined />}
             onClick={() => navigate("/settings")}
           >
             Профиль
           </Button>
           <Button
+            danger
+            type="primary"
             icon={<LogoutOutlined />}
             onClick={() => {
               localStorage.clear();
@@ -401,13 +488,12 @@ export default function ClientPage() {
           </Button>
         </Space>
       </Header>
-      {/* ГЛОБАЛЬНЫЙ ТРЕХКОЛОНОЧНЫЙ КОНТЕЙНЕР РЕКЛАМЫ (Тело ЛК клиента) */}
+      {/* ПОЛНОЭКРАННЫЙ РЕЗИНОВЫЙ ТРЕХКОЛОНОЧНЫЙ КОНТЕЙНЕР (FULL SCREEN) */}
       <div
         style={{
           display: "flex",
           width: "100%",
-          maxWidth: "1600px",
-          margin: "0 auto",
+          padding: "0 20px",
           position: "relative",
         }}
       >
@@ -438,9 +524,9 @@ export default function ClientPage() {
                 marginBottom: "-10px",
               }}
             >
-              Реклама тест
+              Реклама
             </div>
-            {leftAds.map((ad) => (
+            {leftAds.map((ad: any) => (
               <a
                 href={ad.targetUrl || "#"}
                 target="_blank"
@@ -486,14 +572,43 @@ export default function ClientPage() {
             ))}
           </div>
         )}
-        {/* ЦЕНТРАЛЬНЫЙ ОСНОВНОЙ КОНТЕНТ ЛИЧНОГО КАБИНЕТА КЛИЕНТА */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Content style={{ padding: "40px 20px" }}>
-            <div style={{ marginBottom: "25px" }}>
+        {/* ЦЕНТРАЛЬНАЯ ОБЛАСТЬ СТУДИЙ И МАСТЕРОВ */}
+        <div style={{ flex: 1, minWidth: 0, padding: "20px" }}>
+          <Content style={{ width: "100%" }}>
+            {/* СТИЛЬНАЯ ТЕМНАЯ HERO-ПАНЕЛЬ ПРИВЕТСТВИЯ КЛИЕНТА */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                padding: "30px 40px",
+                borderRadius: "20px",
+                color: "#fff",
+                marginBottom: "30px",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
+              }}
+            >
+              <Title
+                level={3}
+                style={{ color: "#fff", margin: 0, fontWeight: 800 }}
+              >
+                ✨ Личный кабинет клиента
+              </Title>
+              <Paragraph
+                style={{
+                  color: "#94a3b8",
+                  margin: "6px 0 0 0",
+                  fontSize: "14px",
+                }}
+              >
+                Управляйте своими визитами онлайн, просматривайте портфолио
+                топ-мастеров и открывайте эксклюзивные предложения салонов.
+              </Paragraph>
+            </div>
+            {/* БЛОК ГРАФИЧЕСКИХ КАТЕГОРИЙ С КАРТИНКАМИ И ЖИВЫМ ФИЛЬТРОМ */}
+            <div style={{ marginBottom: "30px" }}>
               <Text
                 strong
                 style={{
-                  color: "#78350f",
+                  color: "#1e293b",
                   fontSize: "16px",
                   display: "block",
                   marginBottom: "14px",
@@ -516,30 +631,46 @@ export default function ClientPage() {
                     key={cat.id}
                     onClick={() => setSelectedCategoryId(cat.id)}
                     style={{
-                      minWidth: "150px",
-                      height: "85px",
+                      minWidth: "160px",
+                      height: "90px",
                       position: "relative",
                       borderRadius: "16px",
                       overflow: "hidden",
                       cursor: "pointer",
-                      boxShadow: "0 6px 20px rgba(217,119,6,0.06)",
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.04)",
                       border:
                         selectedCategoryId === cat.id
                           ? "3px solid #faad14"
                           : "2px solid #fff",
-                      transition: "all 0.2s ease",
+                      transition: "all 0.25s ease",
+                      transform:
+                        selectedCategoryId === cat.id
+                          ? "scale(1.02)"
+                          : "scale(1)",
                     }}
                   >
-                    <img
-                      src={cat.img}
-                      alt={cat.name}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        filter: "brightness(0.55)",
-                      }}
-                    />
+                    {/* Если это кнопка Все услуги — ставим красивый бьюти-градиент */}
+                    {cat.id === "all" ? (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          background:
+                            "linear-gradient(135deg, #faad14 0%, #d97706 100%)",
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={cat.img}
+                        alt={cat.name}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          filter: "brightness(0.50)",
+                        }}
+                      />
+                    )}
                     <div
                       style={{
                         position: "absolute",
@@ -555,27 +686,32 @@ export default function ClientPage() {
                         strong
                         style={{
                           color: "#fff",
-                          fontSize: "12px",
+                          fontSize: "13px",
                           lineHeight: "1.2",
-                          textShadow: "0 2px 4px rgba(0,0,0,0.6)",
+                          textShadow: "0 2px 4px rgba(0,0,0,0.7)",
                         }}
                       >
-                        {cat.name}
+                        {cat.name.replace(
+                          /[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g,
+                          "",
+                        )}
                       </Text>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* ГРИД-ЛЕНТА ВЫБОРА БЬЮТИ-СТУДИИ С ЖИВЫМ ФИЛЬТРОМ */}
             <div style={{ marginBottom: "35px" }}>
               <Text
                 strong
                 style={{
-                  color: "#78350f",
-                  fontSize: "16px",
+                  color: "#1e293b",
+                  fontSize: "15px",
                   display: "block",
-                  marginBottom: "14px",
-                  fontWeight: 800,
+                  marginBottom: "12px",
+                  fontWeight: 700,
                 }}
               >
                 <ShopOutlined style={{ color: "#faad14" }} /> Выберите студию
@@ -595,40 +731,47 @@ export default function ClientPage() {
                   style={{
                     minWidth: "160px",
                     height: "90px",
-                    borderRadius: "20px",
+                    borderRadius: "16px",
                     border:
                       selectedBusinessId === null
-                        ? "3px solid #faad14"
-                        : "2px solid #fef3c7",
+                        ? "2px solid #faad14"
+                        : "1px solid #e2e8f0",
                     background:
                       selectedBusinessId === null ? "#fff7ed" : "#fff",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     textAlign: "center",
-                    boxShadow: "0 8px 24px rgba(217,119,6,0.04)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
                   }}
                 >
-                  <Text strong style={{ color: "#451a03", fontSize: "15px" }}>
+                  <Text
+                    strong
+                    style={{
+                      color:
+                        selectedBusinessId === null ? "#d97706" : "#1e293b",
+                      fontSize: "14px",
+                    }}
+                  >
                     ✨ Все филиалы
                   </Text>
                 </Card>
 
-                {businesses.map((b) => (
+                {filteredBusinesses.map((b: any) => (
                   <Card
                     key={b.id}
                     hoverable
                     onClick={() => setSelectedBusinessId(b.id)}
                     style={{
                       minWidth: "280px",
-                      borderRadius: "20px",
+                      borderRadius: "16px",
                       border:
                         selectedBusinessId === b.id
-                          ? "3px solid #faad14"
-                          : "2px solid #fef3c7",
+                          ? "2px solid #faad14"
+                          : "1px solid #e2e8f0",
                       background:
                         selectedBusinessId === b.id ? "#fff7ed" : "#fff",
-                      boxShadow: "0 8px 24px rgba(217,119,6,0.04)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
                     }}
                     styles={{ body: { padding: "14px" } }}
                   >
@@ -644,28 +787,28 @@ export default function ClientPage() {
                           src={`${baseUrl}${b.logoUrl}`}
                           alt="logo"
                           style={{
-                            width: "55px",
-                            height: "55px",
-                            borderRadius: "14px",
+                            width: "50px",
+                            height: "50px",
+                            borderRadius: "12px",
                             objectFit: "cover",
-                            border: "1px solid #fef3c7",
+                            border: "1px solid #e2e8f0",
                           }}
                         />
                       ) : (
                         <div
                           style={{
-                            width: "55px",
-                            height: "55px",
-                            borderRadius: "14px",
+                            width: "50px",
+                            height: "50px",
+                            borderRadius: "12px",
                             background:
-                              "linear-gradient(135deg, #fef3c7 0%, #fde047 100%)",
+                              "linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                           }}
                         >
                           <ShopOutlined
-                            style={{ fontSize: "24px", color: "#d97706" }}
+                            style={{ fontSize: "20px", color: "#64748b" }}
                           />
                         </div>
                       )}
@@ -673,8 +816,8 @@ export default function ClientPage() {
                         <Text
                           strong
                           style={{
-                            color: "#451a03",
-                            fontSize: "15px",
+                            color: "#1e293b",
+                            fontSize: "14px",
                             display: "block",
                           }}
                           ellipsis
@@ -683,11 +826,7 @@ export default function ClientPage() {
                         </Text>
                         <Text
                           type="secondary"
-                          style={{
-                            fontSize: "12px",
-                            color: "#78350f",
-                            display: "block",
-                          }}
+                          style={{ fontSize: "12px", display: "block" }}
                           ellipsis
                         >
                           {b.address}
@@ -699,10 +838,11 @@ export default function ClientPage() {
               </div>
             </div>
 
+            {/* ИНТЕРАКТИВНЫЕ ВКЛАДКИ */}
             <Tabs
               defaultActiveKey="1"
               activeKey={activeTab}
-              onChange={(key) => {
+              onChange={(key: string) => {
                 setActiveTab(key);
                 if (key === "3") fetchMyRecordings();
               }}
@@ -721,40 +861,41 @@ export default function ClientPage() {
                     <Card
                       style={{
                         borderRadius: 20,
-                        border: "2px solid #fef3c7",
+                        border: "1px solid #e2e8f0",
                         background: "#fff",
                         marginTop: 15,
+                        boxShadow: "0 4px 15px rgba(0,0,0,0.01)",
                       }}
                     >
-                      <Row align="middle">
+                      <Row align="middle" gutter={24}>
                         <Col xs={24} md={6} style={{ textAlign: "center" }}>
                           {currentActiveSalon.logoUrl ? (
                             <img
                               src={`${baseUrl}${currentActiveSalon.logoUrl}`}
                               alt="logo"
                               style={{
-                                width: 140,
-                                height: 140,
+                                width: 130,
+                                height: 130,
                                 borderRadius: 20,
                                 objectFit: "cover",
-                                border: "3px solid #fef3c7",
+                                border: "2px solid #e2e8f0",
                               }}
                             />
                           ) : (
                             <div
                               style={{
-                                width: 140,
-                                height: 140,
+                                width: 130,
+                                height: 130,
                                 borderRadius: 20,
                                 background:
-                                  "linear-gradient(135deg, #fef3c7 0%, #fde047 100%)",
+                                  "linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%)",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                               }}
                             >
                               <ShopOutlined
-                                style={{ fontSize: 50, color: "#d97706" }}
+                                style={{ fontSize: 44, color: "#64748b" }}
                               />
                             </div>
                           )}
@@ -763,7 +904,7 @@ export default function ClientPage() {
                           <Title
                             level={3}
                             style={{
-                              color: "#451a03",
+                              color: "#1e293b",
                               fontWeight: 800,
                               margin: 0,
                             }}
@@ -772,13 +913,13 @@ export default function ClientPage() {
                           </Title>
                           <Paragraph
                             style={{
-                              color: "#78350f",
+                              color: "#475569",
                               margin: "10px 0",
                               fontSize: 15,
                             }}
                           >
                             {currentActiveSalon.description ||
-                              "Премиальное бьюти-пространство."}
+                              "Премиальное бьюти-пространство вашей идеальной заботы о себе."}
                           </Paragraph>
                           <div
                             style={{
@@ -786,7 +927,7 @@ export default function ClientPage() {
                               flexWrap: "wrap",
                               gap: 20,
                               fontSize: 14,
-                              color: "#92400e",
+                              color: "#475569",
                               fontWeight: 600,
                             }}
                           >
@@ -819,7 +960,7 @@ export default function ClientPage() {
                         background: "#fff",
                         borderRadius: 16,
                         marginTop: 15,
-                        border: "2px dashed #fef3c7",
+                        border: "2px dashed #e2e8f0",
                       }}
                     >
                       <Text type="secondary" style={{ fontSize: 15 }}>
@@ -836,7 +977,7 @@ export default function ClientPage() {
                     </span>
                   ),
                   children: (
-                    <Row style={{ marginTop: 15 }}>
+                    <Row gutter={[20, 20]} style={{ marginTop: 15 }}>
                       {displayedMasters.length === 0 ? (
                         <Col
                           span={24}
@@ -853,9 +994,9 @@ export default function ClientPage() {
                               hoverable
                               style={{
                                 borderRadius: 20,
-                                boxShadow: "0 10px 30px rgba(217,119,6,0.04)",
+                                boxShadow: "0 4px 15px rgba(0,0,0,0.02)",
                                 textAlign: "center",
-                                border: "2px solid #fef3c7",
+                                border: "1px solid #e2e8f0",
                                 background: "#fff",
                               }}
                             >
@@ -878,7 +1019,7 @@ export default function ClientPage() {
                                 >
                                   {m.avatarUrl ? (
                                     <Image
-                                      src={`${baseUrl}${m.avatarUrl}`}
+                                      src={`${baseUrl}${m.avatarUrl.startsWith("/") ? m.avatarUrl : "/" + m.avatarUrl}`}
                                       alt="master"
                                       style={{
                                         width: "100%",
@@ -890,7 +1031,7 @@ export default function ClientPage() {
                                     <Avatar
                                       size={90}
                                       icon={<UserOutlined />}
-                                      style={{ background: "#fbbf24" }}
+                                      style={{ background: "#faad14" }}
                                     />
                                   )}
                                 </div>
@@ -899,7 +1040,7 @@ export default function ClientPage() {
                                 level={4}
                                 style={{
                                   margin: "0 0 4px 0",
-                                  color: "#451a03",
+                                  color: "#1e293b",
                                   fontWeight: 800,
                                 }}
                               >
@@ -907,12 +1048,13 @@ export default function ClientPage() {
                               </Title>
                               <div style={{ marginBottom: 16 }}>
                                 <Tag
-                                  color="warning"
+                                  color="gold"
                                   style={{ fontWeight: 700, borderRadius: 6 }}
                                 >
                                   {m.jobTitle || "Специалист"}
                                 </Tag>
                               </div>
+
                               <div
                                 style={{ textAlign: "left", marginBottom: 20 }}
                               >
@@ -923,15 +1065,17 @@ export default function ClientPage() {
                                     display: "block",
                                     marginBottom: 8,
                                     fontSize: 12,
-                                    color: "#78350f",
+                                    color: "#475569",
                                   }}
                                 >
-                                  <PictureOutlined /> Работы мастера (клик для
-                                  просмотра):
+                                  <PictureOutlined /> Работы мастера:
                                 </Text>
                                 {m.portfolioPhotos &&
                                 m.portfolioPhotos.length > 0 ? (
-                                  <Row style={{ margin: 0 }}>
+                                  <Row
+                                    gutter={[8, 8]}
+                                    style={{ margin: "0 -4px" }}
+                                  >
                                     <Image.PreviewGroup>
                                       {m.portfolioPhotos
                                         .slice(0, 4)
@@ -947,7 +1091,7 @@ export default function ClientPage() {
                                                 height: 55,
                                                 borderRadius: 8,
                                                 overflow: "hidden",
-                                                border: "1px solid #fef3c7",
+                                                border: "1px solid #e2e8f0",
                                                 cursor: "pointer",
                                               }}
                                             >
@@ -968,32 +1112,31 @@ export default function ClientPage() {
                                 ) : (
                                   <div
                                     style={{
-                                      background: "#fffbeb",
+                                      background: "#f8fafc",
                                       padding: 10,
                                       borderRadius: 8,
                                       fontSize: 11,
-                                      color: "#b45309",
+                                      color: "#64748b",
                                       textAlign: "center",
-                                      border: "1px dashed #faad14",
+                                      border: "1px dashed #cbd5e1",
                                     }}
                                   >
                                     Галерея работ пуста
                                   </div>
                                 )}
                               </div>
+
                               <Button
                                 type="primary"
                                 block
                                 size="large"
                                 onClick={() => openBooking(m)}
                                 style={{
-                                  background:
-                                    "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-                                  borderColor: "#d97706",
+                                  background: "#faad14",
+                                  borderColor: "#faad14",
                                   borderRadius: 12,
                                   fontWeight: 800,
                                   height: 44,
-                                  color: "#fff",
                                 }}
                               >
                                 Записаться к мастеру
@@ -1037,14 +1180,16 @@ export default function ClientPage() {
                           title: "Специалист",
                           key: "master",
                           render: (_, r) => (
-                            <span>{r.emploee?.name || "Мастер"}</span>
+                            <span>
+                              {r.emploee?.name || r.employee?.name || "Мастер"}
+                            </span>
                           ),
                         },
                         {
                           title: "Бьюти-услуга",
                           key: "service",
                           render: (_, r) => (
-                            <Tag color="warning" style={{ fontWeight: 600 }}>
+                            <Tag color="gold" style={{ fontWeight: 600 }}>
                               {r.service?.name}
                             </Tag>
                           ),
@@ -1118,7 +1263,7 @@ export default function ClientPage() {
                                   type="secondary"
                                   style={{ fontSize: 13, fontWeight: 500 }}
                                 >
-                                  ✨ Отзыв в базе данных
+                                  ✨ Отзыв отправлен
                                 </Text>
                               );
                             return null;
@@ -1130,159 +1275,9 @@ export default function ClientPage() {
                 },
               ]}
             />
-
-            {/* МОДАЛЬНОЕ ОКНО ОНЛАЙН-БРОНИРОВАНИЯ СЛОТОВ ВРЕМЕНИ */}
-            <Modal
-              title={`Онлайн-запись к специалисту: ${selectedMaster?.name}`}
-              open={isModalOpen}
-              onOk={() => form.submit()}
-              onCancel={() => setIsModalOpen(false)}
-              okText="Подтвердить бронь"
-              cancelText="Назад"
-              okButtonProps={{
-                disabled: !selectedSlot,
-                style: {
-                  background:
-                    "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-                  borderColor: "#d97706",
-                  fontWeight: 700,
-                  color: "#fff",
-                },
-              }}
-            >
-              <Form form={form} layout="vertical" onFinish={onFinish}>
-                <Form.Item
-                  name="serviceId"
-                  label="1. Выберите желаемую услугу"
-                  rules={[{ required: true, message: "Выберите процедуру" }]}
-                >
-                  <Select placeholder="Доступные бьюти-процедуры мастера">
-                    {services.map((s) => (
-                      <Select.Option key={s.id} value={s.id}>
-                        {s.name} — {s.price} ₽
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item
-                  name="date"
-                  label="2. Выберите дату визита"
-                  rules={[
-                    { required: true, message: "Укажите дату календаря" },
-                  ]}
-                >
-                  <DatePicker style={{ width: "100%" }} format="DD.MM.YYYY" />
-                </Form.Item>
-                {formServiceId && formDate && (
-                  <div style={{ marginTop: 20 }}>
-                    <Text
-                      strong
-                      style={{
-                        display: "block",
-                        marginBottom: 10,
-                        color: "#475569",
-                      }}
-                    >
-                      3. Доступные окна сеанса:
-                    </Text>
-                    {loadingSlots ? (
-                      <Text type="secondary">
-                        Подбираем свободные окна мастера...
-                      </Text>
-                    ) : availableSlots.length === 0 ? (
-                      <Text type="danger" strong>
-                        Свободных слотов времени на эту дату нет. Выберите
-                        другой день.
-                      </Text>
-                    ) : (
-                      <Row style={{ margin: 0 }}>
-                        {availableSlots.map((slot) => (
-                          <Col span={6} key={slot} style={{ padding: "4px" }}>
-                            <Button
-                              type={
-                                selectedSlot === slot ? "primary" : "default"
-                              }
-                              block
-                              style={{
-                                borderRadius: 8,
-                                borderColor:
-                                  selectedSlot === slot ? "#faad14" : "#cbd5e1",
-                                background:
-                                  selectedSlot === slot ? "#faad14" : "#fff",
-                                color:
-                                  selectedSlot === slot ? "#fff" : "#1e293b",
-                                fontWeight: 600,
-                              }}
-                              onClick={() => setSelectedSlot(slot)}
-                            >
-                              {slot}
-                            </Button>
-                          </Col>
-                        ))}
-                      </Row>
-                    )}
-                  </div>
-                )}
-              </Form>
-            </Modal>
-
-            {/* МОДАЛЬНОЕ ОКНО ОСТАВЛЕНИЯ ЗВЕЗД И ОТЗЫВОВ КЛИЕНТА */}
-            <Modal
-              title="🌟 Оцените качество бьюти-услуги"
-              open={isReviewModalOpen}
-              onOk={() => reviewForm.submit()}
-              onCancel={() => setIsReviewModalOpen(false)}
-              okText="Отправить отзыв"
-              cancelText="Отмена"
-              okButtonProps={{
-                style: {
-                  background:
-                    "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-                  borderColor: "#d97706",
-                  fontWeight: 700,
-                  color: "#fff",
-                },
-              }}
-            >
-              <Form
-                form={reviewForm}
-                layout="vertical"
-                onFinish={onFinishReview}
-              >
-                <Form.Item
-                  name="rating"
-                  label="1. Поставьте вашу оценку специалисту:"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Пожалуйста, укажите количество звезд",
-                    },
-                  ]}
-                  initialValue={5}
-                >
-                  <Rate style={{ fontSize: 28, color: "#faad14" }} />
-                </Form.Item>
-                <Form.Item
-                  name="comment"
-                  label="2. Напишите ваш отзыв о визите:"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Напишите ваши впечатления о процедуре",
-                    },
-                  ]}
-                >
-                  <Input.TextArea
-                    rows={4}
-                    placeholder="Расскажите, как прошло преображение?"
-                    style={{ borderRadius: 8 }}
-                  />
-                </Form.Item>
-              </Form>
-            </Modal>
           </Content>
         </div>{" "}
-        {/* ЗАКРЫВАЕМ: Центральный основной контент */}
+        {/* CLOSE: Центральный контентный блок */}
         {/* ПРАВЫЙ ПЛАВАЮЩИЙ САЙДБАР РЕКЛАМЫ */}
         {rightAds.length > 0 && (
           <div
@@ -1359,7 +1354,157 @@ export default function ClientPage() {
           </div>
         )}
       </div>{" "}
-      {/* ЗАКРЫВАЕМ: Глобальный Flex-контейнер обертки рекламы */}
+      {/* CLOSE: Глобальный резиновый трехколоночный flex-контейнер */}
+      {/* МОДАЛЬНОЕ ОКНО ОНЛАЙН-БРОНИРОВАНИЯ СЛОТОВ ВРЕМЕНИ */}
+      <Modal
+        title={`Онлайн-запись к специалисту: ${selectedMaster?.name}`}
+        open={isModalOpen}
+        onOk={() => form.submit()}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setSelectedMaster(null);
+        }}
+        okText="Подтвердить бронь"
+        cancelText="Назад"
+        okButtonProps={{
+          disabled: !selectedSlot,
+          style: {
+            background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+            borderColor: "#d97706",
+            fontWeight: 700,
+            color: "#fff",
+          },
+        }}
+      >
+        <Form form={form} layout="vertical" onFinish={onFinish}>
+          <Form.Item
+            name="serviceId"
+            label="1. Выберите желаемую услугу"
+            rules={[{ required: true, message: "Выберите процедуру" }]}
+          >
+            <Select placeholder="Доступные бьюти-процедуры мастера">
+              {services.map((s: any) => (
+                <Select.Option key={s.id} value={s.id}>
+                  {s.name} — {s.price} ₽
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="date"
+            label="2. Выберите дату визита"
+            rules={[{ required: true, message: "Укажите дату календаря" }]}
+          >
+            <DatePicker
+              style={{ width: "100%" }}
+              format="DD.MM.YYYY"
+              allowClear={false}
+            />
+          </Form.Item>
+          {formServiceId && formDate && (
+            <div style={{ marginTop: 20 }}>
+              <Text
+                strong
+                style={{ display: "block", marginBottom: 10, color: "#475569" }}
+              >
+                3. Доступные окна сеанса:
+              </Text>
+              {loadingSlots ? (
+                <Text type="secondary">
+                  Подбираем свободные окна мастера...
+                </Text>
+              ) : availableSlots.length === 0 ? (
+                <Text type="danger" strong>
+                  Свободных slots времени на эту дату нет. Выберите другой день.
+                </Text>
+              ) : (
+                <Row gutter={[8, 8]} style={{ margin: 0 }}>
+                  {availableSlots.map((slot) => (
+                    <Col span={6} key={slot}>
+                      <Button
+                        type={selectedSlot === slot ? "primary" : "default"}
+                        block
+                        style={{
+                          borderRadius: 8,
+                          borderColor:
+                            selectedSlot === slot ? "#faad14" : "#cbd5e1",
+                          background:
+                            selectedSlot === slot ? "#faad14" : "#fff",
+                          color: selectedSlot === slot ? "#fff" : "#1e293b",
+                          fontWeight: 600,
+                        }}
+                        onClick={() => setSelectedSlot(slot)}
+                      >
+                        {slot}
+                      </Button>
+                    </Col>
+                  ))}
+                </Row>
+              )}
+            </div>
+          )}
+        </Form>
+      </Modal>
+      {/* МОДАЛЬНОЕ ОКНО ОСТАВЛЕНИЯ ЗВЕЗД И ОТЗЫВОВ КЛИЕНТА */}
+      <Modal
+        title="🌟 Оцените качество бьюти-услуги"
+        open={isReviewModalOpen}
+        onOk={() => reviewForm.submit()}
+        onCancel={() => setIsReviewModalOpen(false)}
+        okText="Отправить отзыв"
+        cancelText="Отмена"
+        okButtonProps={{
+          style: {
+            background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+            borderColor: "#d97706",
+            fontWeight: 700,
+            color: "#fff",
+          },
+        }}
+      >
+        <Form form={reviewForm} layout="vertical" onFinish={onFinishReview}>
+          <Form.Item
+            name="rating"
+            label="1. Поставьте вашу оценку специалисту:"
+            rules={[
+              {
+                required: true,
+                message: "Пожалуйста, укажите количество звезд",
+              },
+            ]}
+            initialValue={5}
+          >
+            <Rate style={{ fontSize: 28, color: "#faad14" }} />
+          </Form.Item>
+          <Form.Item
+            name="comment"
+            label="2. Напишите ваш отзыв о визите:"
+            rules={[
+              {
+                required: true,
+                message: "Напишите ваши впечатления о процедуре",
+              },
+            ]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Расскажите, как прошло преображение?"
+              style={{ borderRadius: 8 }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Footer
+        style={{
+          textAlign: "center",
+          background: "#fff",
+          borderTop: "1px solid #f0f0f0",
+          padding: "20px",
+        }}
+      >
+        <strong>Beauty Hub ©2026</strong> — Профессиональная CRM-платформа
+        автоматизации сферы услуг
+      </Footer>
     </Layout>
   );
 }

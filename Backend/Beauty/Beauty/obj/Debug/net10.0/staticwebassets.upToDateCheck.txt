@@ -100,3 +100,4 @@ wwwroot\uploads\avatars\avatar-15-acc50411-60d9-4b4a-86c5-5ad66aafe4db.jpg
 wwwroot\uploads\avatars\avatar-9-89683312-21f3-41c7-aae6-918c3825884e.jpg
 wwwroot\uploads\portfolio\d8e201ea-ca03-43ac-90ab-9de4bb314737.JPG
 wwwroot\uploads\ads\b72f4a37-5a61-4d8f-9e55-1a7a6aa9c787.jfif
+wwwroot\uploads\ads\ef2d907c-0fe2-4aad-8e9d-3453fbda9a11.jfif
