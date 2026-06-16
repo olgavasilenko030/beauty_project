@@ -168,6 +168,22 @@
   },
   {
     "ContainingType": "Beauty.Controllers.AuthController",
+    "Method": "ForgotPassword",
+    "RelativePath": "api/Auth/forgot-password",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Beauty.Controllers.ForgotPasswordRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Beauty.Controllers.AuthController",
     "Method": "Login",
     "RelativePath": "api/Auth/login",
     "HttpMethod": "POST",
@@ -219,6 +235,22 @@
       {
         "Name": "model",
         "Type": "Beauty.Controllers.RegisterModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Beauty.Controllers.AuthController",
+    "Method": "ResetPasswordViaLink",
+    "RelativePath": "api/Auth/reset-password-via-link",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Beauty.Controllers.ResetPasswordViaLinkRequest",
         "IsRequired": true
       }
     ],

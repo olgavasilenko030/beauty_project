@@ -1,8 +1,22 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, message, Layout, Tabs, Radio } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  Card,
+  message,
+  Layout,
+  Tabs,
+  Radio,
+  Modal,
+  Typography,
+} from "antd"; // ДОБАВИЛИ: Modal и Typography в общий импорт
 import { UserOutlined, LockOutlined, ShopOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
+
+// ИСПРАВЛЕНО: Извлекаем текстовый компонент Paragraph из Typography
+const { Paragraph } = Typography;
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,6 +28,17 @@ export default function LoginPage() {
   const [role, setRole] = useState("Client");
   const [activeTab, setActiveTab] = useState("login");
   const [regForm] = Form.useForm();
+
+  // ==========================================
+  // ДОБАВЛЕНО: Стейты и формы для восстановления паролей пользователей
+  // ==========================================
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false); // Видимость модалки сброса
+  const [resetStep, setResetStep] = useState(1); // 1 - ввод Email, 2 - ввод кода и нового пароля
+  const [resetEmail, setResetEmail] = useState(""); // Сохраняем email для второго шага
+  const [loadingReset, setLoadingReset] = useState(false); // Лоадер отправки сетевых запросов
+
+  const [emailForm] = Form.useForm(); // Форма Шага 1
+  const [passwordResetForm] = Form.useForm(); // Форма Шага 2
 
   const baseUrl = "https://localhost:7164";
 
@@ -81,6 +106,36 @@ export default function LoginPage() {
       message.error(err.response?.data || "Ошибка при регистрации аккаунта.");
     }
   };
+  // ==========================================
+  // ДОБАВЛЕНО: Функции сетевых запросов восстановления доступа
+  // ==========================================
+
+  // ОБНОВЛЕНО: Запрос токенизированной бьюти-ссылки на Email
+  const handleSendResetCode = async (values: any) => {
+    setLoadingReset(true);
+    try {
+      const emailValue = values.resetEmail.toLowerCase().trim();
+      const res = await axios.post(`${baseUrl}/api/Auth/forgot-password`, {
+        email: emailValue,
+      });
+
+      message.success(
+        res.data.message ||
+          "Ссылка для восстановления доступа отправлена на вашу почту!",
+      );
+
+      // ИСПРАВЛЕНО: Закрываем модалку сразу, так как код вводить больше не нужно!
+      setIsResetModalOpen(false);
+      emailForm.resetFields();
+    } catch (err: any) {
+      message.error(
+        err.response?.data ||
+          "Не удалось отправить ссылку восстановления. Проверьте Email.",
+      );
+    } finally {
+      setLoadingReset(false);
+    }
+  };
 
   const items = [
     {
@@ -114,6 +169,30 @@ export default function LoginPage() {
               size="large"
             />
           </Form.Item>
+          {/* ДОБАВЛЕНО: Кнопка-ссылка вызова системы восстановления доступа */}
+          <div
+            style={{
+              textAlign: "right",
+              marginBottom: "15px",
+              marginTop: "-10px",
+            }}
+          >
+            <Button
+              type="link"
+              onClick={() => {
+                setResetStep(1);
+                setIsResetModalOpen(true);
+              }}
+              style={{
+                color: "#faad14",
+                padding: 0,
+                fontWeight: 500,
+                fontSize: "13px",
+              }}
+            >
+              Забыли пароль?
+            </Button>
+          </div>
           <Button
             type="primary"
             htmlType="submit"
@@ -239,6 +318,67 @@ export default function LoginPage() {
           centered
         />
       </Card>
+      {/* ==========================================
+          ОБНОВЛЕНО: Лаконичное модальное окно запроса ссылки Ant Design
+          ========================================== */}
+      <Modal
+        title="🔒 Восстановление доступа"
+        open={isResetModalOpen}
+        onCancel={() => {
+          setIsResetModalOpen(false);
+          emailForm.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+        width={400}
+        centered
+      >
+        <Form
+          form={emailForm}
+          onFinish={handleSendResetCode}
+          layout="vertical"
+          style={{ marginTop: 15 }}
+        >
+          <Paragraph
+            style={{ color: "#64748b", fontSize: "13px", marginBottom: 20 }}
+          >
+            Введите ваш Email. Если аккаунт существует, мы мгновенно отправим на
+            него сочную интерактивную ссылку для безопасного сброса пароля без
+            ввода лишних кодов.
+          </Paragraph>
+          <Form.Item
+            name="resetEmail"
+            rules={[
+              {
+                required: true,
+                type: "email",
+                message: "Введите корректный Email",
+              },
+            ]}
+          >
+            <Input
+              prefix={<UserOutlined style={{ color: "#bfbfbf" }} />}
+              placeholder="Ваш регистрационный Email"
+              size="large"
+            />
+          </Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            size="large"
+            loading={loadingReset}
+            style={{
+              background: "#faad14",
+              border: "none",
+              marginTop: 10,
+              fontWeight: 600,
+            }}
+          >
+            Получить ссылку для сброса
+          </Button>
+        </Form>
+      </Modal>
     </Layout>
   );
 }

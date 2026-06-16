@@ -7,6 +7,7 @@ import MasterPage from "./pages/MasterPage";
 import SettingsPage from "./pages/SettingsPage";
 import SalonsPage from "./pages/SalonsPage";
 import SalonDetailPage from "./pages/SalonDetailPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 function App() {
   return (
@@ -31,6 +32,8 @@ function App() {
         <Route path="/salon/:id" element={<SalonDetailPage />} />
 
         <Route path="/settings" element={<SettingsPage />} />
+
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
     </BrowserRouter>
   );

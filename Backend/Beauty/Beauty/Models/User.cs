@@ -23,5 +23,15 @@ public partial class User
     [Column("avatar_url")]
     public string? AvatarUrl { get; set; }
 
+    // ==========================================
+    // ИСПРАВЛЕНО: Явный маппинг в нижний регистр (snake_case) для PostgreSQL
+    // ==========================================
+    [Column("reset_code")]
+    public string? ResetCode { get; set; }
+
+    [Column("reset_code_expiry")]
+    public DateTime? ResetCodeExpiry { get; set; }
+
+
     public virtual Business? Business { get; set; }
 }

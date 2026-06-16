@@ -1,4 +1,5 @@
 ﻿using Beauty.Models;
+using Beauty.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +17,15 @@ namespace Beauty.Controllers
     {
         private readonly BeautySalonContext _context;
         private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService; // ДОБАВЛЕНО
 
-        public AuthController(BeautySalonContext context, IConfiguration configuration)
+        public AuthController(BeautySalonContext context, IConfiguration configuration, EmailService emailService)
         {
             _context = context;
             _configuration = configuration;
+            _emailService = emailService; // ДОБАВЛЕНО
         }
+
 
         // --- ВХОД ---
         [HttpPost("login")]
@@ -240,6 +244,64 @@ namespace Beauty.Controllers
         }
 
 
+        // --- ЗАПРОС ССЫЛКИ СБРОСА ПАРОЛЯ НА EMAIL ---
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+            if (user == null)
+            {
+                return Ok(new { message = "Если такой Email зарегистрирован на платформе, ссылка для восстановления отправлена." });
+            }
+
+            // Генерируем уникальный криптографический GUID токен вместо цифр
+            var resetToken = Guid.NewGuid().ToString();
+
+            // Сохраняем токен в поле ResetCode (reset_code) и даем 15 минут
+            user.ResetCode = resetToken;
+            user.ResetCodeExpiry = DateTime.UtcNow.AddMinutes(15);
+            await _context.SaveChangesAsync();
+
+            string userName = "Пользователь";
+            if (user.Role == "Client" && user.LinkedId.HasValue)
+            {
+                var client = await _context.Clients.FindAsync(user.LinkedId.Value);
+                if (client != null) userName = client.Name;
+            }
+
+            // Вызываем отправку ссылки
+            await _emailService.SendPasswordResetLinkAsync(user.Email, userName, resetToken);
+
+            return Ok(new { message = "Ссылка для восстановления доступа успешно отправлена на вашу почту!" });
+        }
+
+        // --- ПРОВЕРКА ТОКЕНА ИЗ ССЫЛКИ И УСТАНОВКА ПАРОЛЯ ---
+        [HttpPost("reset-password-via-link")]
+        public async Task<IActionResult> ResetPasswordViaLink([FromBody] ResetPasswordViaLinkRequest request)
+        {
+            // Ищем пользователя напрямую по уникальному токену!
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetCode == request.Token);
+            if (user == null)
+            {
+                return BadRequest("Недействительная или устаревшая ссылка восстановления.");
+            }
+
+            if (!user.ResetCodeExpiry.HasValue || user.ResetCodeExpiry.Value < DateTime.UtcNow)
+            {
+                return BadRequest("Срок действия ссылки восстановления истёк. Запросите новую.");
+            }
+
+            // Хэшируем и заменяем пароль
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            // Чистим одноразовый токен сброса
+            user.ResetCode = null;
+            user.ResetCodeExpiry = null;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Ваш пароль успешно изменён! Теперь вы можете войти в систему." });
+        }
+
 
 
 
@@ -273,4 +335,14 @@ namespace Beauty.Controllers
         public string? Phone { get; set; }
         public string? AvatarUrl { get; set; }
     }
+
+    public class ForgotPasswordRequest { public string Email { get; set; } = null!; }
+    
+    public class ResetPasswordViaLinkRequest
+    {
+        public string Token { get; set; } = null!;
+        public string NewPassword { get; set; } = null!;
+    }
+
+
 }
