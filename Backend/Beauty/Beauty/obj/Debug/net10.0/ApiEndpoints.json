@@ -151,6 +151,27 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Beauty.Controllers.AnalyticsController",
+    "Method": "GetSalonAnalytics",
+    "RelativePath": "api/Analytics/{businessId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "businessId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "period",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Beauty.Controllers.AuthController",
     "Method": "CreateMasterAccess",
     "RelativePath": "api/Auth/create-master-access",

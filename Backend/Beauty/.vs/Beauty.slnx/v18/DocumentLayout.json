@@ -3,6 +3,18 @@
   "WorkspaceRootPath": "E:\\Beauty_Project\\Backend\\Beauty\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\analyticscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\analyticscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\beautysaloncontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\beautysaloncontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\analyticsdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\analyticsdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -21,10 +33,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\advertisementscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\controllers\\advertisementscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\models\\beautysaloncontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|solutionrelative:beauty\\models\\beautysaloncontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1F6B077A-0A29-E214-BAC2-789B48E4EFEF}|Beauty\\Beauty.csproj|e:\\beauty_project\\backend\\beauty\\beauty\\controllers\\recordingscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -54,11 +62,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "AuthController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\AuthController.cs",
@@ -72,7 +80,33 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AnalyticsController.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\AnalyticsController.cs",
+              "RelativeDocumentMoniker": "Beauty\\Controllers\\AnalyticsController.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\AnalyticsController.cs",
+              "RelativeToolTip": "Beauty\\Controllers\\AnalyticsController.cs",
+              "ViewState": "AgIAAEcAAAAAAAAAAAAAAGoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-16T18:46:47.822Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 2,
+              "Title": "AnalyticsDto.cs",
+              "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\AnalyticsDto.cs",
+              "RelativeDocumentMoniker": "Beauty\\Models\\AnalyticsDto.cs",
+              "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\AnalyticsDto.cs",
+              "RelativeToolTip": "Beauty\\Models\\AnalyticsDto.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAA5wBIAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-16T18:39:48.447Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "User.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\User.cs",
               "RelativeDocumentMoniker": "Beauty\\Models\\User.cs",
@@ -85,7 +119,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "EmailService.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Services\\EmailService.cs",
               "RelativeDocumentMoniker": "Beauty\\Services\\EmailService.cs",
@@ -98,7 +132,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "AdvertisementsController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\AdvertisementsController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\AdvertisementsController.cs",
@@ -110,7 +144,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 6,
               "Title": "Advertisement.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\Advertisement.cs",
               "RelativeDocumentMoniker": "Beauty\\Models\\Advertisement.cs",
@@ -123,19 +157,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 1,
               "Title": "BeautySalonContext.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\BeautySalonContext.cs",
               "RelativeDocumentMoniker": "Beauty\\Models\\BeautySalonContext.cs",
               "ToolTip": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Models\\BeautySalonContext.cs",
               "RelativeToolTip": "Beauty\\Models\\BeautySalonContext.cs",
-              "ViewState": "AgIAAKcAAAAAAAAAAAAmwLwAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAUwLwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-02T20:49:01.846Z"
+              "WhenOpened": "2026-06-02T20:49:01.846Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 12,
               "Title": "ClientsController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ClientsController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\ClientsController.cs",
@@ -147,7 +182,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "BusinessesController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\BusinessesController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\BusinessesController.cs",
@@ -159,7 +194,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "EmployeesController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\EmployeesController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\EmployeesController.cs",
@@ -171,7 +206,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "RecordingsController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\RecordingsController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\RecordingsController.cs",
@@ -183,7 +218,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 11,
               "Title": "ServicesController.cs",
               "DocumentMoniker": "E:\\Beauty_Project\\Backend\\Beauty\\Beauty\\Controllers\\ServicesController.cs",
               "RelativeDocumentMoniker": "Beauty\\Controllers\\ServicesController.cs",

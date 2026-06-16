@@ -251,6 +251,37 @@
         }
       }
     },
+    "/api/Analytics/{businessId}": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "30days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Auth/login": {
       "post": {
         "tags": [
@@ -2839,6 +2870,9 @@
   "tags": [
     {
       "name": "Advertisements"
+    },
+    {
+      "name": "Analytics"
     },
     {
       "name": "Auth"

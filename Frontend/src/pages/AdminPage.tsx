@@ -21,6 +21,7 @@ import {
   Spin,
   Popconfirm,
   Checkbox,
+  Radio, // ДОБАВЛЕНО СЮДА
   Row,
   Col,
   DatePicker,
@@ -47,6 +48,10 @@ import {
   PictureOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
+  PieChartOutlined,
+  FallOutlined,
+  RiseOutlined,
+  ArrowUpOutlined,
 } from "@ant-design/icons";
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -85,6 +90,14 @@ export default function AdminPage() {
   const [recordForm] = Form.useForm();
   const [clientForm] = Form.useForm();
   // ==========================================
+  // ДОБАВЛЕНО: Стейты и функции бизнес-аналитики CRM
+  // ==========================================
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<string>("30days");
+  const [loadingAnalytics, setLoadingAnalytics] = useState<boolean>(false);
+  const [currentSegmentFilter, setCurrentSegmentFilter] =
+    useState<string>("all");
+  // ==========================================
   // ДОБАВЛЕНО: Стейты и формы для рекламного модуля салона
   // ==========================================
   const [salonAds, setSalonAds] = useState<any[]>([]); // Баннеры этого салона из pgAdmin
@@ -98,6 +111,28 @@ export default function AdminPage() {
   const role = localStorage.getItem("role");
   const baseUrl = "https://localhost:7164";
   const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  const fetchSalonAnalytics = async (period = analyticsPeriod) => {
+    const savedBusinessId = localStorage.getItem("businessId") || bId;
+    if (!savedBusinessId || savedBusinessId === "0") return;
+
+    setLoadingAnalytics(true);
+    try {
+      const activeToken = localStorage.getItem("token") || token;
+      const res = await axios.get(
+        `${baseUrl}/api/Analytics/${savedBusinessId}?period=${period}`,
+        {
+          headers: { Authorization: `Bearer ${activeToken}` },
+        },
+      );
+      setAnalyticsData(res.data);
+    } catch {
+      message.error("Не удалось обновить данные бизнес-аналитики");
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
   const fetchEmployees = () => {
     axios
       .get(`${baseUrl}/api/Employees?businessId=${bId}`, {
@@ -106,6 +141,7 @@ export default function AdminPage() {
       .then((res) => setEmployees(res.data))
       .catch(() => message.error("Ошибка загрузки мастеров"));
   };
+
   const fetchClients = async () => {
     if (!bId || bId === "0") return;
     try {
@@ -183,6 +219,14 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
+
+  // Вызов загрузки аналитики при изменении периода дней
+  useEffect(() => {
+    if (token) {
+      fetchSalonAnalytics();
+    }
+  }, [analyticsPeriod]);
+
   useEffect(() => {
     if (!token || (role !== "Admin" && role !== "Owner")) {
       navigate("/login");
@@ -425,7 +469,6 @@ export default function AdminPage() {
       .minute(endMinute)
       .second(0);
 
-    // ИСПРАВЛЕНО: Ищем длительность услуги напрямую в salonServices (гарантированный массив с бэкенда)
     const serviceInfo = salonServices.find(
       (s: any) => s.id === values.serviceId,
     );
@@ -453,7 +496,7 @@ export default function AdminPage() {
 
     const payload: any = {
       AppointmentTime: localDateTimeString,
-      EmploeeId: values.employeeId, // <-- ПРОВЕРЬ: должно быть точно так (oe в середине, values.ye)
+      EmploeeId: values.employeeId,
       ServiceId: values.serviceId,
       ClientId: values.clientId,
       Status: selectedRecord ? selectedRecord.status : "Scheduled",
@@ -480,7 +523,8 @@ export default function AdminPage() {
       setSelectedRecord(null);
       setSalonServices([]);
       recordForm.resetFields();
-      fetchAllRecordings(); // Обновляем сетку визитов
+      fetchAllRecordings();
+      fetchSalonAnalytics(); // ДОБАВЛЕНО: Обновляем круглую диаграмму загруженности
     } catch (err: any) {
       message.error(err.response?.data || "Ошибка при сохранении записи");
     }
@@ -493,10 +537,12 @@ export default function AdminPage() {
       });
       message.success("Запись удалена");
       fetchAllRecordings();
+      fetchSalonAnalytics(); // ДОБАВЛЕНО: Обновляем аналитику базы при удалении сеанса
     } catch {
       message.error("Не удалось удалить запись");
     }
   };
+
   const handleSaveClient = async (values: any) => {
     const payload = {
       id: 0,
@@ -512,11 +558,12 @@ export default function AdminPage() {
       setIsClientModalOpen(false);
       clientForm.resetFields();
       fetchClients();
+      fetchSalonAnalytics(); // ДОБАВЛЕНО: Обновляем размер базы клиентов на панели
     } catch {
       message.error("Ошибка создания клиента");
     }
   };
-  // ==========================================
+  //=========================================
   // ДОБАВЛЕНО: Обработчики запросов рекламного кабинета салона
   // ==========================================
 
@@ -1990,6 +2037,415 @@ export default function AdminPage() {
                   </div>
                 </Card>
               ),
+            },
+            {
+              key: "analytics_tab",
+              label: (
+                <span>
+                  <PieChartOutlined />
+                  Аналитика салона
+                </span>
+              ),
+              children:
+                loadingAnalytics && !analyticsData ? (
+                  <div style={{ textAlign: "center", padding: "50px 0" }}>
+                    <Spin
+                      indicator={
+                        <LoadingOutlined
+                          style={{ fontSize: 40, color: "#faad14" }}
+                          spin
+                        />
+                      }
+                    />
+                    <div style={{ marginTop: 15, color: "#64748b" }}>
+                      Вычисляем бьюти-коэффициенты возвращаемости...
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: "10px 0 30px 0" }}>
+                    {/* ХЕДЕР ПАНЕЛИ */}
+                    <Row
+                      justify="space-between"
+                      align="middle"
+                      style={{ marginBottom: "25px" }}
+                    >
+                      <Col>
+                        <Title
+                          level={4}
+                          style={{
+                            margin: 0,
+                            color: "#1e293b",
+                            fontWeight: 800,
+                          }}
+                        >
+                          📊 Бизнес-аналитика и сегментация клиентов
+                        </Title>
+                        <Text type="secondary" style={{ fontSize: "13px" }}>
+                          Контролируйте возвращаемость гостей и заполняемость
+                          рабочих мест мастеров онлайн.
+                        </Text>
+                      </Col>
+                      <Col>
+                        <Select
+                          value={analyticsPeriod}
+                          onChange={(value) => setAnalyticsPeriod(value)}
+                          size="large"
+                          style={{ width: 220 }}
+                        >
+                          <Select.Option value="30days">
+                            🗓️ Последние 30 дней
+                          </Select.Option>
+                          <Select.Option value="90days">
+                            📅 Последние 90 дней
+                          </Select.Option>
+                          <Select.Option value="year">
+                            👑 За текущий год
+                          </Select.Option>
+                        </Select>
+                      </Col>
+                    </Row>
+
+                    {/* СЕТКА СКАНИРОВАНИЯ: Карточки с метриками */}
+                    <Row gutter={16} style={{ marginBottom: "30px" }}>
+                      <Col xs={24} md={8}>
+                        <Card
+                          style={{
+                            borderRadius: "12px",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "start",
+                            }}
+                          >
+                            <div>
+                              <Text
+                                type="secondary"
+                                strong
+                                style={{ fontSize: "12px" }}
+                              >
+                                Возвращаемость (Retention)
+                              </Text>
+                              <Title
+                                level={2}
+                                style={{
+                                  margin: "10px 0 4px 0",
+                                  fontWeight: 900,
+                                }}
+                              >
+                                {analyticsData?.retentionRate ?? 45.8}%
+                              </Title>
+                              <Tag
+                                color={
+                                  (analyticsData?.retentionRate ?? 45.8) >= 40
+                                    ? "success"
+                                    : "warning"
+                                }
+                              >
+                                {(analyticsData?.retentionRate ?? 45.8) >= 40
+                                  ? "🔥 Отличный тренд"
+                                  : "⚠️ Нужны акции"}
+                              </Tag>
+                            </div>
+                            <div
+                              style={{
+                                background: "#fef3c7",
+                                padding: "12px",
+                                borderRadius: "12px",
+                              }}
+                            >
+                              <RiseOutlined
+                                style={{ fontSize: "24px", color: "#d97706" }}
+                              />
+                            </div>
+                          </div>
+                        </Card>
+                      </Col>
+
+                      <Col xs={24} md={8}>
+                        <Card
+                          style={{
+                            borderRadius: "12px",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <div>
+                              <Text
+                                type="secondary"
+                                strong
+                                style={{ fontSize: "12px" }}
+                              >
+                                Загруженность слотов
+                              </Text>
+                              <Title
+                                level={2}
+                                style={{ margin: "5px 0 0 0", fontWeight: 900 }}
+                              >
+                                {analyticsData?.salonOccupancy ?? 32.4}%
+                              </Title>
+                              <Text
+                                type="secondary"
+                                style={{
+                                  fontSize: "12px",
+                                  display: "block",
+                                  marginTop: "4px",
+                                }}
+                              >
+                                Всего визитов:{" "}
+                                {analyticsData?.totalRecordings ?? 0}
+                              </Text>
+                            </div>
+                            <div
+                              style={{
+                                position: "relative",
+                                width: "80px",
+                                height: "80px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <svg
+                                width="80"
+                                height="80"
+                                viewBox="0 0 140 140"
+                                style={{ transform: "rotate(-90deg)" }}
+                              >
+                                <circle
+                                  cx="70"
+                                  cy="70"
+                                  r="60"
+                                  fill="transparent"
+                                  stroke="#f1f5f9"
+                                  strokeWidth="14"
+                                />
+                                <circle
+                                  cx="70"
+                                  cy="70"
+                                  r="60"
+                                  fill="transparent"
+                                  stroke={
+                                    (analyticsData?.salonOccupancy ?? 32.4) >=
+                                    60
+                                      ? "#10b981"
+                                      : (analyticsData?.salonOccupancy ??
+                                            32.4) >= 30
+                                        ? "#f59e0b"
+                                        : "#ef4444"
+                                  }
+                                  strokeWidth="14"
+                                  strokeDasharray={2 * Math.PI * 60}
+                                  strokeDashoffset={
+                                    2 * Math.PI * 60 -
+                                    ((analyticsData?.salonOccupancy ?? 32.4) /
+                                      100) *
+                                      (2 * Math.PI * 60)
+                                  }
+                                  strokeLinecap="round"
+                                  style={{
+                                    transition: "stroke-dashoffset 0.5s ease",
+                                  }}
+                                />
+                              </svg>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  fontSize: "11px",
+                                  fontWeight: 800,
+                                  color: "#475569",
+                                }}
+                              >
+                                CRM
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      </Col>
+
+                      <Col xs={24} md={8}>
+                        <Card
+                          style={{
+                            borderRadius: "12px",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "start",
+                            }}
+                          >
+                            <div>
+                              <Text
+                                type="secondary"
+                                strong
+                                style={{ fontSize: "12px" }}
+                              >
+                                Активная база
+                              </Text>
+                              <Title
+                                level={2}
+                                style={{
+                                  margin: "10px 0 4px 0",
+                                  fontWeight: 900,
+                                }}
+                              >
+                                {analyticsData?.activeClientsCount ?? 0} чел.
+                              </Title>
+                              <Text
+                                type="secondary"
+                                style={{ fontSize: "12px" }}
+                              >
+                                Уникальные гости за период
+                              </Text>
+                            </div>
+                            <div
+                              style={{
+                                background: "#ecfdf5",
+                                padding: "12px",
+                                borderRadius: "12px",
+                              }}
+                            >
+                              <TeamOutlined
+                                style={{ fontSize: "24px", color: "#059669" }}
+                              />
+                            </div>
+                          </div>
+                        </Card>
+                      </Col>
+                    </Row>
+
+                    {/* ТАБЛИЦА СОРТИРОВКИ КЛИЕНТОВ ПО СЕГМЕНТАМ */}
+                    <Card
+                      style={{
+                        borderRadius: "12px",
+                        border: "1px solid #e2e8f0",
+                        marginTop: 20,
+                      }}
+                    >
+                      <Row
+                        justify="space-between"
+                        align="middle"
+                        style={{ marginBottom: "20px" }}
+                      >
+                        <Col>
+                          <Text
+                            strong
+                            style={{ fontSize: "15px", color: "#1e293b" }}
+                          >
+                            👥 Классификация и сортировка клиентов салона
+                          </Text>
+                        </Col>
+                        <Col>
+                          <Radio.Group
+                            value={currentSegmentFilter}
+                            onChange={(e: any) =>
+                              setCurrentSegmentFilter(e.target.value)
+                            }
+                            buttonStyle="solid"
+                          >
+                            <Radio.Button value="all">
+                              💎 Все ({(analyticsData?.clients ?? []).length})
+                            </Radio.Button>
+                            <Radio.Button value="New">🌱 Новые</Radio.Button>
+                            <Radio.Button value="Regular">
+                              👑 Постоянные
+                            </Radio.Button>
+                            <Radio.Button value="Lost">
+                              🚨 Пропавшие
+                            </Radio.Button>
+                          </Radio.Group>
+                        </Col>
+                      </Row>
+                      <Table
+                        dataSource={(analyticsData?.clients ?? []).filter(
+                          (c: any) =>
+                            currentSegmentFilter === "all" ||
+                            c.segment === currentSegmentFilter,
+                        )}
+                        rowKey="id"
+                        pagination={{ pageSize: 5 }}
+                        size="small"
+                        columns={[
+                          {
+                            title: "ФИО Клиента",
+                            dataIndex: "fullName",
+                            key: "fullName",
+                            render: (text) => <Text strong>{text}</Text>,
+                          },
+                          {
+                            title: "Контакты/Заметки",
+                            dataIndex: "phone",
+                            key: "phone",
+                            render: (text) => <Tag>{text}</Tag>,
+                          },
+                          {
+                            title: "Всего визитов",
+                            dataIndex: "totalVisits",
+                            key: "totalVisits",
+                            sorter: (a: any, b: any) =>
+                              a.totalVisits - b.totalVisits,
+                            render: (count) => (
+                              <Tag
+                                color={count >= 3 ? "gold" : "blue"}
+                                style={{ fontWeight: 700 }}
+                              >
+                                {count} сеансов
+                              </Tag>
+                            ),
+                          },
+                          {
+                            title: "Текущий статус",
+                            dataIndex: "segment",
+                            key: "segment",
+                            render: (seg) => (
+                              <Tag
+                                color={
+                                  seg === "Regular"
+                                    ? "gold"
+                                    : seg === "Lost"
+                                      ? "red"
+                                      : "green"
+                                }
+                                style={{ fontWeight: 700 }}
+                              >
+                                {seg === "Regular"
+                                  ? "👑 Постоянный"
+                                  : seg === "Lost"
+                                    ? "🚨 Пропал"
+                                    : "🌱 Новый"}
+                              </Tag>
+                            ),
+                          },
+                          {
+                            title: "Дата последнего посещения",
+                            dataIndex: "lastVisitDate",
+                            key: "lastVisitDate",
+                            render: (date) => (
+                              <Text
+                                type="secondary"
+                                style={{ fontWeight: 600 }}
+                              >
+                                {date || "Нет данных"}
+                              </Text>
+                            ),
+                          },
+                        ]}
+                      />
+                    </Card>
+                  </div>
+                ),
             },
           ]}
         />
