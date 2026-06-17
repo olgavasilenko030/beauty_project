@@ -614,6 +614,16 @@
   },
   {
     "ContainingType": "Beauty.Controllers.ClientsController",
+    "Method": "GetMyProfile",
+    "RelativePath": "api/Clients/my-profile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Beauty.Controllers.ClientsController",
     "Method": "ToggleBlockClient",
     "RelativePath": "api/Clients/ToggleBlock/{id}",
     "HttpMethod": "PATCH",
@@ -971,17 +981,7 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": [
-      {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[Beauty.Models.Recording, Beauty, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Beauty.Controllers.RecordingsController",
@@ -1008,6 +1008,16 @@
         "StatusCode": 200
       }
     ]
+  },
+  {
+    "ContainingType": "Beauty.Controllers.RecordingsController",
+    "Method": "GetMyRecordings",
+    "RelativePath": "api/Recordings/my-history",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Beauty.Controllers.RecordingsController",

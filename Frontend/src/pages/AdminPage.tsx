@@ -19,6 +19,7 @@ import {
   Tag,
   Upload,
   Spin,
+  Progress,
   Popconfirm,
   Checkbox,
   Radio, // ДОБАВЛЕНО СЮДА
@@ -90,6 +91,12 @@ export default function AdminPage() {
   const [recordForm] = Form.useForm();
   const [clientForm] = Form.useForm();
   // ==========================================
+  // ДОБАВЛЕНО: Стейты и формы для редактирования анкеты клиента CRM
+  // ==========================================
+  const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
+  const [selectedClientForEdit, setSelectedClientForEdit] = useState<any>(null);
+  const [editClientForm] = Form.useForm();
+  // ==========================================
   // ДОБАВЛЕНО: Стейты и функции бизнес-аналитики CRM
   // ==========================================
   const [analyticsData, setAnalyticsData] = useState<any>(null);
@@ -112,6 +119,76 @@ export default function AdminPage() {
   const baseUrl = "https://localhost:7164";
   const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
+  // ==========================================
+  // ДОБАВЛЕНО: Живая маска для полей ввода телефона сотрудника (Input)
+  // ==========================================
+  const handlePhoneInputChange = (
+    e: any,
+    formInstance: any,
+    fieldName: string,
+  ) => {
+    let value = e.target.value.replace(/\D/g, ""); // Очищаем всё, кроме цифр
+
+    if (value.startsWith("7") || value.startsWith("8")) {
+      value = value.substring(1); // Отрезаем первую 7 или 8, так как мы подставим +7 жестко
+    }
+
+    let formattedValue = "";
+    if (value.length > 0) {
+      formattedValue += `+7 (${value.substring(0, 3)}`;
+    }
+    if (value.length >= 4) {
+      formattedValue += `) ${value.substring(3, 6)}`;
+    }
+    if (value.length >= 7) {
+      formattedValue += `-${value.substring(6, 8)}`;
+    }
+    if (value.length >= 9) {
+      formattedValue += `-${value.substring(8, 10)}`;
+    }
+
+    // Если поле очистили полностью
+    if (value.length === 0) formattedValue = "";
+
+    // Мгновенно обновляем значение в конкретной форме Ant Design
+    formInstance.setFieldsValue({ [fieldName]: formattedValue });
+  };
+
+  // Обработчик PUT-запроса для обновления анкеты гостя в PostgreSQL
+  const handleEditClientSubmit = async (values: any) => {
+    try {
+      const payload = {
+        id: selectedClientForEdit?.id,
+        name: values.name,
+        surname: values.surname,
+        notes: values.phone, // Передаем телефон в поле notes под структуру базы
+        dateOfBirth: values.dateOfBirth
+          ? values.dateOfBirth.format("YYYY-MM-DD")
+          : null,
+        gender: values.gender,
+        discount: values.discount,
+        sourceOfAttraction: values.sourceOfAttraction,
+      };
+
+      await axios.put(
+        `${baseUrl}/api/Clients/${selectedClientForEdit.id}`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      message.success("Анкета клиента успешно обновлена!");
+      setIsEditClientModalOpen(false);
+      setSelectedClientForEdit(null);
+      editClientForm.resetFields();
+      fetchClients(); // Перезагружаем таблицу, чтобы увидеть новые данные
+    } catch (err: any) {
+      message.error(
+        err.response?.data || "Не удалось сохранить изменения клиента",
+      );
+    }
+  };
   const fetchSalonAnalytics = async (period = analyticsPeriod) => {
     const savedBusinessId = localStorage.getItem("businessId") || bId;
     if (!savedBusinessId || savedBusinessId === "0") return;
@@ -544,26 +621,52 @@ export default function AdminPage() {
   };
 
   const handleSaveClient = async (values: any) => {
-    const payload = {
-      id: 0,
-      name: values.name,
-      surname: values.surname,
-      phone: values.phone,
-    };
     try {
-      await axios.post(`${baseUrl}/api/Clients`, payload, {
+      // 1. ИСПРАВЛЕНО: Привели поля к PascalCase и записали телефон в Notes под структуру твоей БД!
+      const payload = {
+        Id: 0,
+        Name: values.name,
+        Surname: values.surname || "CRM",
+        Notes: values.phone || "Контакты", // Телефон шлем строго в Notes!
+        Discount: 0,
+        IsBlocked: false,
+      };
+
+      // Шлем POST-запрос на бэкенд .NET Core для создания карточки в PostgreSQL
+      const res = await axios.post(`${baseUrl}/api/Clients`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      message.success("Клиент добавлен!");
+
+      // Получаем чистый объект созданного клиента с его реальным Id из базы данных
+      const createdClient = res.data;
+
+      message.success("Новый клиент успешно добавлен!");
       setIsClientModalOpen(false);
       clientForm.resetFields();
-      fetchClients();
-      fetchSalonAnalytics(); // ДОБАВЛЕНО: Обновляем размер базы клиентов на панели
-    } catch {
-      message.error("Ошибка создания клиента");
+
+      // 2. ИСПРАВЛЕНО: Мгновенно подмешиваем созданного клиента в стейт локально!
+      // Это решает проблему INNER JOIN: клиент СРАЗУ появится в выпадающем списке выбора,
+      // и администратор сможет моментально создать для него реальный визит!
+      const clientWithEmail = {
+        id: createdClient.id || createdClient.Id,
+        name: values.name,
+        surname: values.surname || "CRM",
+        notes: values.phone || "Контакты",
+        isBlocked: false,
+        email: "Локальный контакт",
+      };
+
+      setClients((prev) => [clientWithEmail, ...prev]);
+
+      // Обновляем общие справочники и счетчики на панели аналитики
+      if (typeof fetchSalonAnalytics === "function") {
+        fetchSalonAnalytics();
+      }
+    } catch (err: any) {
+      message.error(err.response?.data || "Ошибка создания клиента");
     }
   };
-  //=========================================
+
   // ДОБАВЛЕНО: Обработчики запросов рекламного кабинета салона
   // ==========================================
 
@@ -747,8 +850,20 @@ export default function AdminPage() {
       title: "Телефон",
       dataIndex: "phone",
       key: "phone",
-      render: (p: string) => p || "—",
+      render: (p: string) =>
+        p ? (
+          /* ИСПРАВЛЕНО: Прогоняем номер мастера через маску и выводим в стильном теге */
+          <Tag
+            color="red"
+            style={{ fontSize: "13px", fontWeight: 600, padding: "2px 8px" }}
+          >
+            {formatPhoneNumber(p)}
+          </Tag>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
     },
+
     {
       title: "Действия",
       key: "action",
@@ -802,41 +917,180 @@ export default function AdminPage() {
     },
   ];
 
+  // ==========================================
+  // ДОБАВЛЕНО: Функция автоматического маскирования номеров телефона для CRM
+  // ==========================================
+  const formatPhoneNumber = (phoneString: string) => {
+    if (!phoneString) return "—";
+    const cleaned = (phoneString + "").replace(/\D/g, "");
+    if (cleaned.length < 5) return phoneString; // Если в заметках обычный текст
+
+    const match = cleaned.match(/^(7|8)?(\d{3})(\d{3})(\d{2})(\d{2})$/);
+    if (match) {
+      return `+7 (${match[2]}) ${match[3]}-${match[4]}-${match[5]}`;
+    }
+    return `+7 ${cleaned}`;
+  };
+
+  // ОБНОВЛЕНО: Расширенная сетка колонок со всеми графами из PostgreSQL и маской телефона
   const clientColumns = [
-    { title: "ID", dataIndex: "id", key: "id" },
-    { title: "Имя", dataIndex: "name", key: "name" },
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: 60,
+    },
+    {
+      title: "Имя",
+      dataIndex: "name",
+      key: "name",
+      width: 140,
+      render: (n: string) => <strong>{n}</strong>,
+    },
     {
       title: "Фамилия",
       dataIndex: "surname",
       key: "surname",
-      render: (s: string) => s || "—",
+      width: 140,
+      render: (s: string) => s || <Text type="secondary">—</Text>,
     },
-    { title: "Email", dataIndex: "email", key: "email" },
+    {
+      title: "📞 Телефон",
+      dataIndex: "notes", // Мапим телефон из поля notes, как заложено в твоем CRM-методе handleSaveClient
+      key: "phone",
+      width: 180,
+      render: (text: string) => (
+        <Tag
+          color="red"
+          style={{ fontSize: "13px", fontWeight: 600, padding: "2px 8px" }}
+        >
+          {formatPhoneNumber(text)}
+        </Tag>
+      ),
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      width: 160,
+      render: (email: string) => email || <Text type="secondary">—</Text>,
+    },
+    {
+      title: "День рождения",
+      dataIndex: "dateOfBirth",
+      key: "dob",
+      width: 140,
+      render: (date: string) =>
+        date ? (
+          new Date(date).toLocaleDateString("ru-RU")
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
+    },
+    {
+      title: "Пол",
+      dataIndex: "gender",
+      key: "gender",
+      width: 100,
+      render: (g: string) =>
+        g === "Male" || g === "Мужской" ? (
+          "👨 Муж"
+        ) : g === "Female" || g === "Женский" ? (
+          "👩 Жен"
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
+    },
+    {
+      title: "Скидка",
+      dataIndex: "discount",
+      key: "discount",
+      width: 100,
+      sorter: (a: any, b: any) => (a.discount || 0) - (b.discount || 0),
+      render: (disc: number) =>
+        disc > 0 ? (
+          <Tag color="volcano" style={{ fontWeight: 700 }}>
+            %{disc}
+          </Tag>
+        ) : (
+          <Text type="secondary">0%</Text>
+        ),
+    },
+    {
+      title: "Источник",
+      dataIndex: "sourceOfAttraction",
+      key: "source",
+      width: 150,
+      render: (src: string) =>
+        src ? (
+          <Tag color="blue" style={{ fontWeight: 600 }}>
+            {src}
+          </Tag>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
+    },
     {
       title: "Статус",
       dataIndex: "isBlocked",
+      key: "status",
+      width: 120,
       render: (b: boolean) =>
         b ? (
-          <Tag color="red">ЗАБЛОКИРОВАН</Tag>
+          <Tag color="red" style={{ fontWeight: 700 }}>
+            БЛОК
+          </Tag>
         ) : (
-          <Tag color="green">АКТИВЕН</Tag>
+          <Tag color="green" style={{ fontWeight: 700 }}>
+            АКТИВЕН
+          </Tag>
         ),
     },
     {
       title: "Действие",
       key: "action",
+      width: 280, // Увеличиваем ширину, чтобы две кнопки красиво встали в ряд
+      fixed: "right" as const, // Прижимает кнопки к правому краю при прокрутке таблицы
       render: (_: any, r: any) => (
-        <Button
-          type={r.isBlocked ? "default" : "primary"}
-          danger={!r.isBlocked}
-          icon={r.isBlocked ? <CheckCircleOutlined /> : <StopOutlined />}
-          onClick={() => handleToggleBlock(r.id)}
-        >
-          {r.isBlocked ? "Разблокировать" : "Заблокировать"}
-        </Button>
+        <Space size="small">
+          {/* ДОБАВЛЕНО: Кнопка «Изменить», которая открывает форму и подгружает данные клиента */}
+          <Button
+            icon={<EditOutlined />}
+            size="small"
+            style={{ fontWeight: 600, borderRadius: "6px" }}
+            onClick={() => {
+              setSelectedClientForEdit(r);
+              // Автоматически заполняем поля формы текущими данными из PostgreSQL
+              editClientForm.setFieldsValue({
+                name: r.name,
+                surname: r.surname,
+                phone: r.notes, // Передаем телефон из поля notes
+                dateOfBirth: r.dateOfBirth ? dayjs(r.dateOfBirth) : null, // Преобразуем строку даты в объект дня календаря
+                gender: r.gender,
+                discount: r.discount,
+                sourceOfAttraction: r.sourceOfAttraction,
+              });
+              setIsEditClientModalOpen(true);
+            }}
+          >
+            Изменить
+          </Button>
+
+          <Button
+            type={r.isBlocked ? "default" : "primary"}
+            danger={!r.isBlocked}
+            size="small"
+            icon={r.isBlocked ? <CheckCircleOutlined /> : <StopOutlined />}
+            onClick={() => handleToggleBlock(r.id)}
+            style={{ borderRadius: "6px", fontWeight: 600 }}
+          >
+            {r.isBlocked ? "Разблокировать" : "Заблокировать"}
+          </Button>
+        </Space>
       ),
     },
   ];
+
   const filteredEmployeesList = employees.filter((e) => {
     const s =
       `${e.name || ""} ${e.surname || ""} ${e.jobTitle || ""}`.toLowerCase();
@@ -1287,20 +1541,40 @@ export default function AdminPage() {
                           });
                       }}
                     >
-                      <Form.Item name="name" rules={[{ required: true }]}>
+                      <Form.Item
+                        name="name"
+                        rules={[{ required: true, message: "Имя" }]}
+                      >
                         <Input placeholder="Имя" />
                       </Form.Item>
                       <Form.Item name="surname">
                         <Input placeholder="Фамилия" />
                       </Form.Item>
-                      <Form.Item name="jobTitle" rules={[{ required: true }]}>
+                      <Form.Item
+                        name="jobTitle"
+                        rules={[{ required: true, message: "Должность" }]}
+                      >
                         <Input placeholder="Должность" />
                       </Form.Item>
+
+                      {/* ДОБАВЛЕНО: Поле ввода телефона мастера с живой маской */}
+                      <Form.Item name="phone">
+                        <Input
+                          placeholder="Телефон мастера"
+                          maxLength={18}
+                          style={{ width: 180 }}
+                          onChange={(e) =>
+                            handlePhoneInputChange(e, employeeForm, "phone")
+                          }
+                        />
+                      </Form.Item>
+
                       <Button type="primary" htmlType="submit">
                         В штат
                       </Button>
                     </Form>
                   </Card>
+
                   <Card
                     title="Команда"
                     extra={
@@ -1697,7 +1971,7 @@ export default function AdminPage() {
                       placeholder="Поиск..."
                       prefix={<SearchOutlined />}
                       value={searchClient}
-                      onChange={(e) => setSearchClient(e.target.value)}
+                      onChange={(e: any) => setSearchClient(e.target.value)}
                       style={{ width: 320 }}
                     />
                   }
@@ -1706,10 +1980,13 @@ export default function AdminPage() {
                     dataSource={filteredClientsList}
                     columns={clientColumns}
                     rowKey="id"
+                    // ИСПРАВЛЕНО: Добавлен пуленепробиваемый скролл для широкой анкеты
+                    scroll={{ x: "max-content" }}
                   />
                 </Card>
               ),
             },
+
             {
               key: "4",
               label: (
@@ -2168,8 +2445,10 @@ export default function AdminPage() {
                       <Col xs={24} md={8}>
                         <Card
                           style={{
-                            borderRadius: "12px",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                            borderRadius: "16px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                            border: "1px solid #f1f5f9",
+                            background: "#fff",
                           }}
                         >
                           <div
@@ -2183,90 +2462,44 @@ export default function AdminPage() {
                               <Text
                                 type="secondary"
                                 strong
-                                style={{ fontSize: "12px" }}
+                                style={{
+                                  fontSize: "12px",
+                                  textTransform: "uppercase",
+                                  color: "#64748b",
+                                  letterSpacing: "0.5px",
+                                }}
                               >
                                 Загруженность слотов
                               </Text>
                               <Title
                                 level={2}
-                                style={{ margin: "5px 0 0 0", fontWeight: 900 }}
+                                style={{
+                                  margin: "10px 0 4px 0",
+                                  fontWeight: 900,
+                                  color: "#1e293b",
+                                }}
                               >
-                                {analyticsData?.salonOccupancy ?? 32.4}%
+                                {analyticsData?.SalonOccupancy ??
+                                  analyticsData?.salonOccupancy ??
+                                  5.7}
+                                %
                               </Title>
                               <Text
                                 type="secondary"
                                 style={{
-                                  fontSize: "12px",
+                                  fontSize: "13px",
                                   display: "block",
-                                  marginTop: "4px",
+                                  color: "#475569",
+                                  fontWeight: 500,
                                 }}
                               >
                                 Всего визитов:{" "}
-                                {analyticsData?.totalRecordings ?? 0}
+                                <strong>
+                                  {analyticsData?.TotalRecordings ??
+                                    analyticsData?.totalRecordings ??
+                                    0}
+                                </strong>
                               </Text>
-                            </div>
-                            <div
-                              style={{
-                                position: "relative",
-                                width: "80px",
-                                height: "80px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <svg
-                                width="80"
-                                height="80"
-                                viewBox="0 0 140 140"
-                                style={{ transform: "rotate(-90deg)" }}
-                              >
-                                <circle
-                                  cx="70"
-                                  cy="70"
-                                  r="60"
-                                  fill="transparent"
-                                  stroke="#f1f5f9"
-                                  strokeWidth="14"
-                                />
-                                <circle
-                                  cx="70"
-                                  cy="70"
-                                  r="60"
-                                  fill="transparent"
-                                  stroke={
-                                    (analyticsData?.salonOccupancy ?? 32.4) >=
-                                    60
-                                      ? "#10b981"
-                                      : (analyticsData?.salonOccupancy ??
-                                            32.4) >= 30
-                                        ? "#f59e0b"
-                                        : "#ef4444"
-                                  }
-                                  strokeWidth="14"
-                                  strokeDasharray={2 * Math.PI * 60}
-                                  strokeDashoffset={
-                                    2 * Math.PI * 60 -
-                                    ((analyticsData?.salonOccupancy ?? 32.4) /
-                                      100) *
-                                      (2 * Math.PI * 60)
-                                  }
-                                  strokeLinecap="round"
-                                  style={{
-                                    transition: "stroke-dashoffset 0.5s ease",
-                                  }}
-                                />
-                              </svg>
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  fontSize: "11px",
-                                  fontWeight: 800,
-                                  color: "#475569",
-                                }}
-                              >
-                                CRM
-                              </div>
                             </div>
                           </div>
                         </Card>
@@ -2519,19 +2752,28 @@ export default function AdminPage() {
         >
           <Form form={editForm} layout="vertical" onFinish={handleEditEmployee}>
             <Form.Item name="name" label="Имя" rules={[{ required: true }]}>
-              <Input />
+              <Input size="large" />
             </Form.Item>
             <Form.Item name="surname" label="Фамилия">
-              <Input />
+              <Input size="large" />
             </Form.Item>
             <Form.Item name="jobTitle" label="Должность">
-              <Input />
+              <Input size="large" />
             </Form.Item>
-            <Form.Item name="phone" label="Telephone">
-              <Input />
+
+            {/* ИСПРАВЛЕНО: Поле телефона с живой маской и красивой иконкой Ant Design */}
+            <Form.Item name="phone" label="Номер телефона">
+              <Input
+                placeholder="+7 (999) 123-45-67"
+                maxLength={18}
+                size="large"
+                prefix={<PhoneOutlined style={{ color: "#a80606" }} />}
+                onChange={(e) => handlePhoneInputChange(e, editForm, "phone")}
+              />
             </Form.Item>
           </Form>
         </Modal>
+
         <Modal
           title="Редактировать услугу"
           open={isEditServiceModalOpen}
@@ -2655,6 +2897,106 @@ export default function AdminPage() {
             <Form.Item name="phone" label="Телефон">
               <Input />
             </Form.Item>
+          </Form>
+        </Modal>
+        {/* ==========================================
+            ДОБАВЛЕНО: Модальное окно редактирования анкеты клиента CRM
+            ========================================== */}
+        <Modal
+          title={`📝 Редактирование анкеты: ${selectedClientForEdit?.name || ""}`}
+          open={isEditClientModalOpen}
+          onOk={() => editClientForm.submit()}
+          onCancel={() => {
+            setIsEditClientModalOpen(false);
+            setSelectedClientForEdit(null);
+            editClientForm.resetFields();
+          }}
+          okText="Сохранить изменения"
+          cancelText="Отмена"
+          width={500}
+          centered
+        >
+          <Form
+            form={editClientForm}
+            layout="vertical"
+            onFinish={handleEditClientSubmit}
+            style={{ marginTop: 15 }}
+          >
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="name"
+                  label="Имя"
+                  rules={[{ required: true, message: "Введите имя клиента" }]}
+                >
+                  <Input size="large" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="surname" label="Фамилия">
+                  <Input size="large" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item name="phone" label="Номер телефона">
+              <Input
+                size="large"
+                placeholder="Например: 79991234567"
+                prefix={<PhoneOutlined style={{ color: "#a80606" }} />}
+              />
+            </Form.Item>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="dateOfBirth" label="День рождения">
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    format="DD.MM.YYYY"
+                    size="large"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="gender" label="Пол клиента">
+                  <Select placeholder="Укажите пол" size="large">
+                    <Select.Option value="Мужской">👨 Мужской</Select.Option>
+                    <Select.Option value="Женский">👩 Женский</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="discount" label="Персональная скидка (%)">
+                  <InputNumber
+                    min={0}
+                    max={100}
+                    style={{ width: "100%" }}
+                    size="large"
+                    placeholder="Например: 10"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="sourceOfAttraction"
+                  label="Источник привлечения"
+                >
+                  <Select placeholder="Откуда пришёл гость" size="large">
+                    <Select.Option value="VK">ВКонтакте</Select.Option>
+                    <Select.Option value="Instagram">Instagram</Select.Option>
+                    <Select.Option value="Рекомендация">
+                      Рекомендация друзей
+                    </Select.Option>
+                    <Select.Option value="Вывеска">
+                      Проходил мимо / Вывеска
+                    </Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
           </Form>
         </Modal>
       </Content>

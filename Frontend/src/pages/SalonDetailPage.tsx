@@ -218,8 +218,11 @@ export default function SalonDetailPage() {
                 >
                   {salon.name}
                 </Title>
-                <Tag color="gold" style={{ fontWeight: 700, borderRadius: 6 }}>
-                  ★ {avgRating} ТОП
+                <Tag
+                  color="gold"
+                  style={{ fontWeight: 700, borderRadius: 6, fontSize: 18 }}
+                >
+                  ★ {avgRating}
                 </Tag>
               </div>
               <Paragraph
@@ -560,11 +563,15 @@ export default function SalonDetailPage() {
                     dataSource={services}
                     renderItem={(s) => (
                       <List.Item
+                        style={{ textAlign: "left" }}
                         extra={
                           <Space size="large">
                             <Text
                               strong
-                              style={{ fontSize: "18px", color: "#b45309" }}
+                              style={{
+                                fontSize: "18px",
+                                color: "#b45309",
+                              }}
                             >
                               {s.price} ₽
                             </Text>
@@ -590,13 +597,24 @@ export default function SalonDetailPage() {
                           title={
                             <Text
                               strong
-                              style={{ fontSize: "16px", color: "#451a03" }}
+                              style={{
+                                fontSize: "16px",
+                                color: "#451a03",
+                                display: "block",
+                                textAlign: "left",
+                              }}
                             >
                               {s.name}
                             </Text>
                           }
                           description={
-                            <span style={{ color: "#78350f" }}>
+                            <span
+                              style={{
+                                color: "#78350f",
+                                display: "block",
+                                textAlign: "left",
+                              }}
+                            >
                               <ClockCircleOutlined
                                 style={{ color: "#059669" }}
                               />{" "}
@@ -667,6 +685,7 @@ export default function SalonDetailPage() {
                         style={{
                           padding: "16px 0",
                           borderBottom: "1px solid #f1f5f9",
+                          textAlign: "left",
                         }}
                       >
                         <List.Item.Meta
@@ -680,19 +699,29 @@ export default function SalonDetailPage() {
                             <Space size="middle">
                               <Text
                                 strong
-                                style={{ color: "#451a03", fontSize: "15px" }}
+                                style={{
+                                  color: "#451a03",
+                                  fontSize: "15px",
+                                  textAlign: "left",
+                                }}
                               >
                                 {r.clientName}
                               </Text>
                               <Rate
                                 disabled
                                 defaultValue={r.rating}
-                                style={{ fontSize: "12px", color: "#faad14" }}
+                                style={{
+                                  fontSize: "12px",
+                                  color: "#faad14",
+                                  textAlign: "left",
+                                }}
                               />
                             </Space>
                           }
                           description={
-                            <div style={{ marginTop: "4px" }}>
+                            <div
+                              style={{ marginTop: "4px", textAlign: "left" }}
+                            >
                               <Paragraph
                                 style={{
                                   color: "#78350f",

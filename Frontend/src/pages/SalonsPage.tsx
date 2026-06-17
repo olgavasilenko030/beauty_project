@@ -104,7 +104,7 @@ export default function SalonsPage() {
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: "normal",
             marginBottom: 40,
             flexWrap: "wrap",
             gap: 16,
@@ -206,7 +206,7 @@ export default function SalonsPage() {
                     <Col
                       xs={24}
                       sm={6}
-                      style={{ display: "flex", justifyContent: "center" }}
+                      style={{ display: "flex", justifyContent: "left" }}
                     >
                       {salon.logoUrl ? (
                         <img
@@ -231,7 +231,7 @@ export default function SalonsPage() {
                               "linear-gradient(135deg, #fef3c7 0%, #fde047 100%)",
                             display: "inline-flex",
                             alignItems: "center",
-                            justifyContent: "center",
+                            justifyContent: "left",
                             border: "2px dashed #faad14",
                           }}
                         >
@@ -252,7 +252,7 @@ export default function SalonsPage() {
                         <div
                           style={{
                             display: "flex",
-                            alignItems: "center",
+                            alignItems: "baseline",
                             gap: "10px",
                             flexWrap: "wrap",
                           }}
@@ -273,15 +273,17 @@ export default function SalonsPage() {
                             style={{
                               borderRadius: "6px",
                               fontWeight: 700,
-                              fontSize: "12px",
+                              fontSize: "18px",
                               padding: "2px 10px",
                               background: "#fff7ed",
                               border: "1px solid #faad14",
                               color: "#c2410c",
                             }}
                           >
-                            ★ {salon.rating ? salon.rating.toFixed(1) : "5.0"}{" "}
-                            ТОП
+                            ★{" "}
+                            {salon.rating
+                              ? salon.rating.toFixed(1)
+                              : "5.0"}{" "}
                           </Tag>
                         </div>
                         <Paragraph
@@ -290,6 +292,7 @@ export default function SalonsPage() {
                             fontSize: "15px",
                             color: "#78350f",
                             lineHeight: "1.5",
+                            textAlign: "left",
                           }}
                           ellipsis={{ rows: 2 }}
                         >

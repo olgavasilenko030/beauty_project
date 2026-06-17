@@ -105,6 +105,84 @@ export default function ClientPage() {
 
   const [ads, setAds] = useState<any[]>([]);
   const [allServices, setAllServices] = useState<any[]>([]); // ДОБАВЛЕНО: Списочный стейт всех услуг для фильтрации
+  // ==========================================
+  // ДОБАВЛЕНО: Стейты и методы профиля клиента CRM
+  // ==========================================
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState<boolean>(false);
+  const [profileForm] = Form.useForm();
+
+  const fetchMyRecordings = () => {
+    setLoadingRecordings(true);
+    // Направляем запрос на наш прокачанный эндпоинт ForClient с передачей токена безопасности!
+    axios
+      .get(`${baseUrl}/api/Recordings/ForClient/${linkedId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setMyRecordings(res.data || []))
+      .catch(() => message.error("Ошибка при загрузке архива записей"))
+      .finally(() => setLoadingRecordings(false));
+  };
+
+  // ИСПРАВЛЕНО: Чистый метод без обращения к удаленной форме profileForm, чтобы убрать ошибку заклинивания React!
+  const fetchClientProfile = async () => {
+    const activeToken = localStorage.getItem("token") || token;
+    if (!activeToken) return;
+
+    setLoadingProfile(true);
+    try {
+      const res = await axios.get(`${baseUrl}/api/Auth/profile`, {
+        headers: { Authorization: `Bearer ${activeToken}` },
+      });
+      // Сохраняем чистый JSON-объект профиля, который вернул AuthController
+      setProfileData(res.data);
+    } catch (err) {
+      console.error(
+        "Не удалось подгрузить имя авторизованного бьюти-гостя:",
+        err,
+      );
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  const handleUpdateProfileSubmit = async (values: any) => {
+    try {
+      const payload = {
+        Id: parseInt(linkedId || "0", 10),
+        Name: values.name,
+        Surname: values.surname || "CRM",
+        Notes: values.phone || "Контакты",
+        DateOfBirth: values.dateOfBirth
+          ? values.dateOfBirth.format("YYYY-MM-DD")
+          : null,
+        Gender: values.gender,
+        SourceOfAttraction: values.sourceOfAttraction,
+        IsBlocked: profileData?.isBlocked || false,
+        Discount: profileData?.discount || 0,
+      };
+      await axios.put(`${baseUrl}/api/Clients/${linkedId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      message.success("Данные вашего профиля успешно сохранены!");
+      fetchClientProfile();
+    } catch {
+      message.error("Не удалось сохранить изменения профиля");
+    }
+  };
+
+  const handleClientPhoneChange = (e: any) => {
+    let value = e.target.value.replace(/\D/g, "");
+    if (value.startsWith("7") || value.startsWith("8"))
+      value = value.substring(1);
+    let formattedValue = "";
+    if (value.length > 0) formattedValue += `+7 (${value.substring(0, 3)}`;
+    if (value.length >= 4) formattedValue += `) ${value.substring(3, 6)}`;
+    if (value.length >= 7) formattedValue += `-${value.substring(6, 8)}`;
+    if (value.length >= 9) formattedValue += `-${value.substring(8, 10)}`;
+    if (value.length === 0) formattedValue = "";
+    profileForm.setFieldsValue({ phone: formattedValue });
+  };
 
   const categories = [
     { id: "all", name: "🚀 Все услуги", img: "" },
@@ -139,17 +217,6 @@ export default function ClientPage() {
       img: `${baseUrl}/uploads/categories/massage.jpg`,
     },
   ];
-
-  const fetchMyRecordings = () => {
-    setLoadingRecordings(true);
-    axios
-      .get(`${baseUrl}/api/Recordings/ForClient/${linkedId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setMyRecordings(res.data || []))
-      .catch(() => message.error("Ошибка при загрузке архива записей"))
-      .finally(() => setLoadingRecordings(false));
-  };
 
   const handleCancel = (id: number) => {
     confirm({
@@ -264,6 +331,17 @@ export default function ClientPage() {
       navigate("/login");
       return;
     }
+
+    // ==========================================
+    // ЖЕСТКИЙ ПРИНУДИТЕЛЬНЫЙ ВЫЗОВ ДАННЫХ ПРОФИЛЯ И ЗАПИСЕЙ
+    // ==========================================
+    if (typeof fetchClientProfile === "function") {
+      fetchClientProfile();
+    }
+    if (typeof fetchMyRecordings === "function") {
+      fetchMyRecordings();
+    }
+
     axios
       .get(`${baseUrl}/api/Businesses`)
       .then((res) => setBusinesses(res.data || []))
@@ -307,7 +385,6 @@ export default function ClientPage() {
       .then((res) => setAds(res.data || []))
       .catch(() => setAds([]));
 
-    // ДОБАВЛЕНО: Скачиваем полный прайс-лист всех салонов для глубокой фильтрации по тексту услуг
     axios
       .get(`${baseUrl}/api/Services`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -590,8 +667,16 @@ export default function ClientPage() {
                 level={3}
                 style={{ color: "#fff", margin: 0, fontWeight: 800 }}
               >
-                ✨ Личный кабинет клиента
+                {/* ИСПРАВЛЕНО: Если бэкенд не отдал имя, выводим Email пользователя, чтобы не горел "гость"! */}
+                ✨ Рады видеть вас,{" "}
+                {profileData?.name ||
+                  profileData?.Name ||
+                  profileData?.email ||
+                  profileData?.Email ||
+                  "наш дорогой гость"}
+                !
               </Title>
+
               <Paragraph
                 style={{
                   color: "#94a3b8",
@@ -844,7 +929,7 @@ export default function ClientPage() {
               activeKey={activeTab}
               onChange={(key: string) => {
                 setActiveTab(key);
-                if (key === "3") fetchMyRecordings();
+                if (key === "3") fetchMyRecordings(); // Вызываем метод
               }}
               size="large"
               animated={true}
@@ -1163,6 +1248,15 @@ export default function ClientPage() {
                       style={{ marginTop: 15 }}
                       pagination={{ pageSize: 6 }}
                       columns={[
+                        {
+                          title: "Салон красоты",
+                          key: "salon",
+                          render: (_, r) => (
+                            <Text strong style={{ color: "#d97706" }}>
+                              {r.SalonName ?? r.salonName ?? "BEAUTY HUB"}
+                            </Text>
+                          ),
+                        },
                         {
                           title: "Дата и время визита",
                           dataIndex: "appointmentTime",

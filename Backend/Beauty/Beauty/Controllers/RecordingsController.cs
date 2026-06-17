@@ -158,6 +158,39 @@ namespace Beauty.Controllers
             return Ok(availableSlots);
         }
 
+        [HttpGet("my-history")]
+        [Authorize] // ИСПРАВЛЕНО: Вернули полноценный Authorize, теперь Claim не будет пустым!
+        public async Task<IActionResult> GetMyRecordings()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+            var user = await _context.Users.FindAsync(int.Parse(userIdClaim));
+            if (user == null) return Unauthorized();
+
+            // 1. Скачиваем записи из PostgreSQL со всеми INNER JOIN связями
+            var dbRecordings = await _context.Recordings
+                .Include(r => r.Emploee)
+                    .ThenInclude(e => e.Business)
+                .Include(r => r.Service)
+                .Where(r => r.ClientId == user.LinkedId)
+                .OrderByDescending(r => r.AppointmentTime)
+                .ToListAsync();
+
+            // 2. Безопасно мапим анонимный JSON-объект в оперативной памяти сервера (.AsEnumerable)
+            var result = dbRecordings.AsEnumerable().Select(r => new
+            {
+                r.Id,
+                AppointmentTime = r.AppointmentTime.ToString("dd.MM.yyyy HH:mm"),
+                MasterName = r.Emploee != null ? $"{r.Emploee.Name} {r.Emploee.Surname}".Trim() : "Мастер",
+                ServiceName = r.Service?.Name ?? "Процедура",
+                Price = r.Service?.Price ?? 0,
+                Status = r.Status,
+                SalonName = r.Emploee?.Business?.Name ?? "Салон красоты BEAUTY HUB"
+            }).ToList();
+
+            return Ok(result);
+        }
 
 
         // --- ДЛЯ МАСТЕРА: Получить его расписание ---
@@ -174,19 +207,54 @@ namespace Beauty.Controllers
                 .ToListAsync();
         }
 
-        // --- ДЛЯ КЛИЕНТА: Получить его историю записей ---
+        // --- ДЛЯ КЛИЕНТА: Получить его историю записей с названиями салонов красоты ---
+        // GET: api/Recordings/ForClient/5
         [HttpGet("ForClient/{clientId}")]
-        [Authorize]
-        public async Task<ActionResult<IEnumerable<Recording>>> GetClientRecordings(int clientId)
+        [Authorize] // Оставляем авторизацию, теперь она отработает идеально!
+        public async Task<IActionResult> GetClientRecordings(int clientId)
         {
-            return await _context.Recordings
-                .AsNoTracking()
-                .Where(r => r.ClientId == clientId)
-                .Include(r => r.Emploee)
-                .Include(r => r.Service)
-                .OrderByDescending(r => r.AppointmentTime)
-                .ToListAsync();
+            if (clientId == 0) return BadRequest("Идентификатор клиента не указан.");
+
+            try
+            {
+                // 1. ИСПРАВЛЕНО: Добавили цепочку .ThenInclude(e => e.Business) для выгрузки данных салона из PostgreSQL!
+                var dbRecordings = await _context.Recordings
+                    .AsNoTracking()
+                    .Where(r => r.ClientId == clientId)
+                    .Include(r => r.Emploee)
+                        .ThenInclude(e => e.Business) // Подключаем таблицу салонов сети!
+                    .Include(r => r.Service)
+                    .OrderByDescending(r => r.AppointmentTime)
+                    .ToListAsync();
+
+                if (!dbRecordings.Any())
+                {
+                    return Ok(new List<object>());
+                }
+
+                // 2. ИСПРАВЛЕНО: Форматируем анонимный объект в памяти сервера (.AsEnumerable), чтобы даты не ломали PostgreSQL!
+                var result = dbRecordings.AsEnumerable().Select(r => new
+                {
+                    r.Id,
+                    // Форматируем дату под твой фронтенд
+                    AppointmentTime = r.AppointmentTime.ToString("dd.MM.yyyy HH:mm"),
+                    MasterName = r.Emploee != null ? $"{r.Emploee.Name} {r.Emploee.Surname}".Trim() : "Мастер",
+                    ServiceName = r.Service?.Name ?? "Процедура",
+                    Price = r.Service?.Price ?? 0,
+                    Status = r.Status,
+                    // Вытаскиваем реальное название салона из базы!
+                    SalonName = r.Emploee?.Business?.Name ?? "Салон красоты BEAUTY HUB"
+                }).ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CRM ERROR] Ошибка истории в ForClient: {ex.Message}");
+                return StatusCode(500, "Внутренняя ошибка сервера при компиляции истории визитов: " + ex.Message);
+            }
         }
+
 
         // POST: api/Recordings
         [HttpPost]
