@@ -1,73 +1,98 @@
-# React + TypeScript + Vite
+# 💅 CRM Beauty Hub — Профессиональная бьюти-платформа автоматизации сферы услуг
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### 🌐 Живая ссылка на сайт (Frontend):
 
-Currently, two official plugins are available:
+👉 **[https://olgavasilenko030.github.io/beauty_project/]**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Beauty Hub** — это современная Fullstack CRM-система для управления студиями красоты, салонами и частными мастерами. Платформа позволяет полностью контролировать расписание, вести детальный учёт бьюти-гостей, анализировать возвращаемость клиентов, вести онлайн-запись и отправлять автоматические email-нотификации.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🚀 Основной функционал (Features)
 
-## Expanding the ESLint configuration
+### 📈 Личный кабинет Администратора (Owner Dashboard)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- 📊 **Интерактивная бизнес-аналитика**: Живой подсчёт коэффициента возвращаемости клиентов (Retention Rate) и процента загруженности слотов времени мастеров.
+- 👥 **Умная сегментация базы**: Автоматическая классификация бьюти-гостей на категории (🌱 _Новые_, 👑 _Постоянные_, 🚨 _Пропавшие_) на основе истории их визитов.
+- 🔒 **Управление CRM-анкетами**: Полноценное редактирование карточек гостей (Персональные скидки, источники рекламы, пол, дни рождения) напрямую в PostgreSQL.
+- 📞 **Живое маскирование**: Автоматическое форматирование номеров телефонов сотрудников и клиентов в формат `+7 (999) 123-45-67` прямо во время ввода.
+- 🚫 **Чёрный список**: Мгновенная блокировка недобросовестных клиентов с защитой от создания новых записей.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 👩‍⚕️ Личный кабинет Клиента (Customer Dashboard)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- ✨ **Именное бьюти-приветствие**: Персональный коммерческий интерфейс с автоподгрузкой личных данных.
+- 🗓️ **Журнал визитов**: Сквозная сетка истории сеансов с детальным выводом дат, цен, статусов и _конкретного названия филиала салона сети_.
+- ⏱️ **Онлайн-бронирование**: Умный календарь подбора свободных окон времени мастеров с защитой от пересечения накладок и учётом времени отдыха (Break After Recording).
+- 🌟 **Система бьюти-отзывов**: Оставление звёздного рейтинга и комментариев после выполнения процедур.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## 🛠️ Технологический стек (Tech Stack)
+
+### 💻 Backend (Бэкенд)
+
+- **Платформа**: .NET 10 (C#)
+- **Архитектура**: REST API (Controller-based)
+- **База данных**: PostgreSQL
+- **ORM**: Entity Framework Core (LINQ-to-Entities)
+- **Безопасность**: JWT (JSON Web Tokens) Bearer Authentication с разделением ролей (Admin, Master, Client)
+- **Сервисы**: Интеграция SMTP EmailService для фоновой отправки писем-подтверждений бронирования
+
+### 🎨 Frontend (Фронтенд)
+
+- **Инструменты**: React + TypeScript
+- **Сборщик**: Vite (Fast Refresh)
+- **Компоненты**: Ant Design 5.x (Premium UX/UI)
+- **Иконки**: Ant Design Icons
+- **Работа с API**: Axios (с перехватом токенов авторизации)
+- **Работа с датами**: Day.js
+
+---
+
+## 📂 Структура репозитория
+
+```text
+Beauty_Project/
+│
+├── .git/                      # Системный кэш Git
+├── .gitignore                 # Игнорирование системного мусора .vs, obj, bin, node_modules
+├── README.md                  # Документация проекта
+│
+├── Backend/                   # C# .NET 10 Web API
+│   ├── Controllers/           # Эндпоинты (Clients, Recordings, Auth, Employees)
+│   ├── Models/                # Модели сущностей БД и DTO-классы
+│   └── Services/              # Бизнес-логика и Email Нотификации
+│
+└── Frontend/                  # React + Vite + TypeScript
+    ├── src/
+    │   ├── pages/             # Страницы (AdminPage, ClientPage, SettingsPage)
+    │   ├── App.tsx            # Клиентский роутинг
+    │   └── main.tsx           # Точка входа React DOM
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## ⚡ Быстрый запуск (Quick Start)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### 1. Настройка Бэкенда
+
+1. Откройте решение `Backend/Beauty/Beauty.sln` в **Visual Studio**.
+2. Настройте строку подключения (Connection String) к вашей локальной базе **PostgreSQL** в файле `appsettings.Development.json`.
+3. Нажмите комбинацию клавиш **`Ctrl + F5`** для запуска Web API сервера (порт по умолчанию: `7164`).
+
+### 2. Настройка Фронтенда
+
+1. Откройте папку `Frontend/` в терминале.
+2. Установите зависимости проекта:
+   ```bash
+   npm install
+   ```
+3. Запустите локальный сервер разработки Vite:
+   ```bash
+   npm run dev
+   ```
+4. Откройте в браузере локальный адрес: `http://localhost:5173`.
+
+---
+
+_Разработано в 2026 году как коммерческое Fullstack-решение автоматизации сферы бьюти-индустрии._
