@@ -1,3 +1,16 @@
+<img width="1020" height="1507" alt="главная" src="https://github.com/user-attachments/assets/08da6991-0dd8-419a-a3cb-b5ae10331e34" />
+<img width="1521" height="1680" alt="лк мастер" src="https://github.com/user-attachments/assets/10311a35-97c7-4a94-b709-77af7105d362" />
+<img width="1085" height="1295" alt="клиент кабинет" src="https://github.com/user-attachments/assets/bd1ac35b-4f7f-4f9b-b5ae-2e9d3755923a" />
+<img width="1047" height="746" alt="лк данные салона" src="https://github.com/user-attachments/assets/153698b3-a80b-4720-a619-03790c2dcc21" />
+<img width="1521" height="1446" alt="лк сотрудники" src="https://github.com/user-attachments/assets/dc5b6298-c132-4fe7-b5e7-634d4fb741fd" />
+<img width="1543" height="1378" alt="лк реклама" src="https://github.com/user-attachments/assets/4c9830f9-1871-4d0d-b361-5bcbe70a777d" />
+<img width="1543" height="1378" alt="лк клиентская база" src="https://github.com/user-attachments/assets/a4db0d39-6b24-4ac2-b083-4997372fc350" />
+<img width="1033" height="527" alt="лк аналитика" src="https://github.com/user-attachments/assets/228d5226-1862-44cf-8eab-b90d61e3b0ed" />
+
+
+
+
+
 # 💅 CRM Beauty Hub — Профессиональная бьюти-платформа автоматизации сферы услуг
 
 ### 🌐 Живая ссылка на сайт (Frontend):
@@ -50,7 +63,7 @@
 ---
 
 ## 📂 Структура репозитория
-## 📸 Скриншоты интерфейса
+
 
 
 ```text
