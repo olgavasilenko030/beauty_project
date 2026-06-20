@@ -101,3 +101,17 @@ wwwroot\uploads\avatars\avatar-9-89683312-21f3-41c7-aae6-918c3825884e.jpg
 wwwroot\uploads\portfolio\d8e201ea-ca03-43ac-90ab-9de4bb314737.JPG
 wwwroot\uploads\ads\b72f4a37-5a61-4d8f-9e55-1a7a6aa9c787.jfif
 wwwroot\uploads\ads\ef2d907c-0fe2-4aad-8e9d-3453fbda9a11.jfif
+wwwroot\uploads\portfolio\b44d9f2d-9bab-40d1-be8a-4b51478a3675.jfif
+wwwroot\uploads\portfolio\93c98154-e0d2-4093-b96c-e0ce315c8c2b.jfif
+wwwroot\uploads\portfolio\b4bf2976-773a-4b26-9817-3d58600666fe.jfif
+wwwroot\uploads\portfolio\cad94e8b-f4c7-4b6a-8e08-05cf23a32d43.jfif
+wwwroot\uploads\portfolio\01061fa4-c7ea-4dc1-8a49-1cca9a09d11f.jfif
+wwwroot\uploads\portfolio\465ac09a-e5b9-493c-9eb6-6d06d3406415.jfif
+wwwroot\uploads\portfolio\8520426b-710e-41a6-97a6-039e5f2f1ec7.jfif
+wwwroot\uploads\portfolio\070b9bc7-68f8-4439-8ac2-28e43983b7c1.jfif
+wwwroot\uploads\portfolio\cbc5b384-7f26-44a2-a68e-b28acc64ca2b.jfif
+wwwroot\uploads\portfolio\8a80354c-b60a-4f86-b524-186ffdd71baf.jfif
+wwwroot\uploads\portfolio\0f1c529d-f0eb-49d2-82ef-6f003b0836d2.jfif
+wwwroot\uploads\portfolio\8584edce-f6d2-45a9-b4a0-bac4ad57dd3d.jfif
+wwwroot\uploads\portfolio\c594871b-8065-41db-9682-4411ee101ccf.jfif
+wwwroot\uploads\portfolio\d4ad2861-ba1e-47a1-aca7-452a2ee7a4b1.jfif

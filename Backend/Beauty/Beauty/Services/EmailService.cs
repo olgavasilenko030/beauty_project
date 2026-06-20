@@ -82,7 +82,7 @@ namespace Beauty.Services
             try
             {
                 // Формируем прямую ссылку на будущую страницу сброса пароля в React
-                string resetLink = $"http://localhost:5173/reset-password?token={resetToken}";
+                string resetLink = $"http://localhost:5173/beauty_project/reset-password?token={resetToken}";
 
                 var mailMessage = new MailMessage
                 {

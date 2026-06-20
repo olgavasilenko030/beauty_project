@@ -404,22 +404,6 @@
   },
   {
     "ContainingType": "Beauty.Controllers.BusinessesController",
-    "Method": "DeleteBusiness",
-    "RelativePath": "api/Businesses/{id}",
-    "HttpMethod": "DELETE",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Beauty.Controllers.BusinessesController",
     "Method": "GetBusinessesByCategory",
     "RelativePath": "api/Businesses/by-category",
     "HttpMethod": "GET",
@@ -591,22 +575,6 @@
       {
         "Name": "client",
         "Type": "Beauty.Models.Client",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Beauty.Controllers.ClientsController",
-    "Method": "DeleteClient",
-    "RelativePath": "api/Clients/{id}",
-    "HttpMethod": "DELETE",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
         "IsRequired": true
       }
     ],

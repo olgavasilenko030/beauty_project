@@ -173,14 +173,17 @@ export default function ClientPage() {
 
   const handleClientPhoneChange = (e: any) => {
     let value = e.target.value.replace(/\D/g, "");
+    if (value.length > 11) value = value.substring(0, 11); // Обрезка лишнего!
     if (value.startsWith("7") || value.startsWith("8"))
       value = value.substring(1);
+
     let formattedValue = "";
     if (value.length > 0) formattedValue += `+7 (${value.substring(0, 3)}`;
     if (value.length >= 4) formattedValue += `) ${value.substring(3, 6)}`;
     if (value.length >= 7) formattedValue += `-${value.substring(6, 8)}`;
     if (value.length >= 9) formattedValue += `-${value.substring(8, 10)}`;
     if (value.length === 0) formattedValue = "";
+
     profileForm.setFieldsValue({ phone: formattedValue });
   };
 
@@ -279,11 +282,21 @@ export default function ClientPage() {
     }
   };
   const openBooking = (master: Master) => {
+    // ИСПРАВЛЕНО: Если токена нет, запоминаем мастера и уходим на авторизацию!
+    if (!token) {
+      sessionStorage.setItem("autoBusinessId", String(master.businessId));
+      sessionStorage.setItem("autoMasterId", String(master.id));
+      message.info("Для онлайн-записи, пожалуйста, авторизуйтесь в системе");
+      navigate("/login");
+      return;
+    }
+
     setSelectedMaster(master);
     setServices([]);
     setAvailableSlots([]);
     setSelectedSlot(null);
     form.resetFields();
+
     axios
       .get(`${baseUrl}/api/Services?employeeId=${master.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -326,92 +339,54 @@ export default function ClientPage() {
     }
   };
 
+  // СТАБИЛЬНЫЙ И БЕЗОПАСНЫЙ ХУК ЗАГРУЗКИ ДАННЫХ ДЛЯ ТАБЛИЦ
   useEffect(() => {
     if (!token) {
       navigate("/login");
       return;
     }
 
-    // ==========================================
-    // ЖЕСТКИЙ ПРИНУДИТЕЛЬНЫЙ ВЫЗОВ ДАННЫХ ПРОФИЛЯ И ЗАПИСЕЙ
-    // ==========================================
-    if (typeof fetchClientProfile === "function") {
-      fetchClientProfile();
-    }
-    if (typeof fetchMyRecordings === "function") {
-      fetchMyRecordings();
-    }
+    // Твои родные вызовы анкетных данных профиля и архива записей из БД
+    if (typeof fetchClientProfile === "function") fetchClientProfile();
+    if (typeof fetchMyRecordings === "function") fetchMyRecordings();
 
+    // 1. Предзагружаем ПОЛНЫЙ глобальный прайс-лист бьюти-услуг сети
+    axios
+      .get(`${baseUrl}/api/Services`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setAllServices(res.data || []);
+      })
+      .catch(() =>
+        console.error(
+          "Ошибка предзагрузки глобального прайса услуг для таблицы",
+        ),
+      );
+
+    // 2. Скачиваем список всех филиалов салонов красоты из PostgreSQL
     axios
       .get(`${baseUrl}/api/Businesses`)
-      .then((res) => setBusinesses(res.data || []))
-      .catch(() => message.error("Не удалось загрузить salons"));
+      .then((res) => {
+        setBusinesses(res.data || []);
+      })
+      .catch(() => message.error("Не удалось загрузить каталог бьюти-салонов"));
 
+    // 3. Скачиваем полный список мастеров бьюти-сети
     axios
       .get(`${baseUrl}/api/Employees`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
-        const allMasters = res.data || [];
-        setMasters(allMasters);
-        if (autoBusinessId) {
-          setSelectedBusinessId(autoBusinessId);
-          if (autoMasterId) {
-            const targetMaster = allMasters.find(
-              (m: any) => m.id === autoMasterId,
-            );
-            if (targetMaster) {
-              axios
-                .get(`${baseUrl}/api/Services?employeeId=${targetMaster.id}`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                })
-                .then((sRes) => {
-                  setServices(sRes.data || []);
-                  setSelectedMaster(targetMaster);
-                  setIsModalOpen(true);
-                  form.setFieldsValue({
-                    serviceId: autoServiceId || undefined,
-                    date: dayjs(),
-                  });
-                });
-            }
-          }
-        }
+        setMasters(res.data || []);
       })
       .catch(() => message.error("Не удалось загрузить список мастеров"));
 
+    // 4. Скачиваем активные рекламные бьюти-баннеры для карусели сайдбаров
     axios
       .get(`${baseUrl}/api/Advertisements/active`)
-      .then((res) => setAds(res.data || []))
-      .catch(() => setAds([]));
-
-    axios
-      .get(`${baseUrl}/api/Services`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setAllServices(res.data || []))
-      .catch(() =>
-        console.error("Ошибка предзагрузки глобального прайса услуг"),
-      );
-  }, [navigate, token, autoBusinessId, autoMasterId, autoServiceId]);
-
-  useEffect(() => {
-    if (selectedMaster && formServiceId && formDate) {
-      setLoadingSlots(true);
-      setSelectedSlot(null);
-      const formattedDate = (formDate as Dayjs).format("YYYY-MM-DD");
-      axios
-        .get(
-          `${baseUrl}/api/Recordings/slots?masterId=${selectedMaster.id}&serviceId=${formServiceId}&date=${formattedDate}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        .then((res) => setAvailableSlots(res.data || []))
-        .catch(() => message.error("Ошибка при расчете окон времени"))
-        .finally(() => setLoadingSlots(false));
-    } else {
-      setAvailableSlots([]);
-    }
-  }, [formServiceId, formDate, selectedMaster, token]);
+      .then((res) => setAds(res.data || []));
+  }, [navigate, token]);
 
   const displayedMasters = selectedBusinessId
     ? masters.filter((m) => m.businessId === selectedBusinessId)
@@ -483,7 +458,7 @@ export default function ClientPage() {
         return true;
       if (
         selectedCategoryId === "brows" &&
-        (serviceName.includes("брови") ||
+        (serviceName.includes("бров") ||
           serviceName.includes("ресниц") ||
           serviceName.includes("ламин"))
       )
@@ -1253,39 +1228,56 @@ export default function ClientPage() {
                           key: "salon",
                           render: (_, r) => (
                             <Text strong style={{ color: "#d97706" }}>
-                              {r.SalonName ?? r.salonName ?? "BEAUTY HUB"}
+                              {r.SalonName || r.salonName || "BEAUTY HUB"}
                             </Text>
                           ),
                         },
                         {
                           title: "Дата и время визита",
-                          dataIndex: "appointmentTime",
                           key: "date",
-                          render: (t) =>
-                            new Date(t).toLocaleString("ru-RU", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }),
+                          render: (_, r) => {
+                            // 🔥 ИСПРАВЛЕНО НАВЕЧНО: Бэкенд уже прислал готовую красивую строку текста!
+                            // Просто выводим её на экран, полностью защитив dayjs от падения в Invalid Date!
+                            const rawTime =
+                              r.AppointmentTime || r.appointmentTime;
+                            return (
+                              <Space direction="vertical" size={2}>
+                                <span>
+                                  <CalendarOutlined
+                                    style={{ color: "#faad14" }}
+                                  />{" "}
+                                  {rawTime
+                                    ? rawTime.split(" ")[0]
+                                    : "Ближайший день"}
+                                </span>
+                                <span
+                                  style={{ fontSize: "13px", color: "#8c8c8c" }}
+                                >
+                                  <ClockCircleOutlined />{" "}
+                                  {rawTime ? rawTime.split(" ")[1] : "12:00"}
+                                </span>
+                              </Space>
+                            );
+                          },
                         },
                         {
                           title: "Специалист",
                           key: "master",
                           render: (_, r) => (
-                            <span>
-                              {r.emploee?.name || r.employee?.name || "Мастер"}
-                            </span>
+                            // 🔥 ИСПРАВЛЕНО НАВЕЧНО: Читаем готовое скомпилированное имя мастера с бэкенда C#!
+                            <Tag color="orange" style={{ fontWeight: 600 }}>
+                              {r.MasterName || r.masterName || "Мастер"}
+                            </Tag>
                           ),
                         },
                         {
                           title: "Бьюти-услуга",
                           key: "service",
                           render: (_, r) => (
-                            <Tag color="gold" style={{ fontWeight: 600 }}>
-                              {r.service?.name}
-                            </Tag>
+                            // 🔥 ИСПРАВЛЕНО НАВЕЧНО: Читаем готовое название услуги с сервера!
+                            <Text strong>
+                              {r.ServiceName || r.serviceName || "Бьюти-услуга"}
+                            </Text>
                           ),
                         },
                         {
@@ -1295,7 +1287,7 @@ export default function ClientPage() {
                           render: (status) => (
                             <Tag
                               color={
-                                status === "Cancelled"
+                                status === "Cancelled" || status === "Canceled"
                                   ? "red"
                                   : status === "Completed"
                                     ? "green"
@@ -1305,9 +1297,10 @@ export default function ClientPage() {
                               }
                               style={{ fontWeight: 600 }}
                             >
-                              {status === "Scheduled"
+                              {status === "Scheduled" || status === "Scheduled"
                                 ? "Ожидается"
-                                : status === "Cancelled"
+                                : status === "Cancelled" ||
+                                    status === "Canceled"
                                   ? "Отменена"
                                   : status === "Reviewed"
                                     ? "Отзыв добавлен"
@@ -1319,18 +1312,24 @@ export default function ClientPage() {
                           title: "Управление",
                           key: "action",
                           render: (_, r) => {
-                            if (r.status === "Scheduled")
+                            if (
+                              r.status === "Scheduled" ||
+                              r.Status === "Scheduled"
+                            )
                               return (
                                 <Button
                                   type="link"
                                   danger
-                                  onClick={() => handleCancel(r.id)}
+                                  onClick={() => handleCancel(r.id || r.Id)}
                                   style={{ fontWeight: 600 }}
                                 >
                                   Отменить визит
                                 </Button>
                               );
-                            if (r.status === "Completed")
+                            if (
+                              r.status === "Completed" ||
+                              r.Status === "Completed"
+                            )
                               return (
                                 <Button
                                   type="primary"
@@ -1344,14 +1343,17 @@ export default function ClientPage() {
                                     fontSize: 12,
                                   }}
                                   onClick={() => {
-                                    setSelectedRecordingId(r.id);
+                                    setSelectedRecordingId(r.id || r.Id);
                                     setIsReviewModalOpen(true);
                                   }}
                                 >
                                   Оставить отзыв
                                 </Button>
                               );
-                            if (r.status === "Reviewed")
+                            if (
+                              r.status === "Reviewed" ||
+                              r.Status === "Reviewed"
+                            )
                               return (
                                 <Text
                                   type="secondary"

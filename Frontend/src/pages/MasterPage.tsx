@@ -90,6 +90,8 @@ export default function MasterPage() {
   const [recordForm] = Form.useForm();
   const [clientForm] = Form.useForm();
 
+  const [masterProfile, setMasterProfile] = useState<any>(null); // ДОБАВЛЕНО: Стейт для хранения имени мастера
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const masterId = localStorage.getItem("linkedId");
@@ -137,27 +139,55 @@ export default function MasterPage() {
     }
   };
 
+  // ХУК ЭФФЕКТА: Срабатывает автоматически при открытии страницы кабинета мастера
   useEffect(() => {
+    // ЗАЩИТА РОУТА: Если токена нет ИЛИ роль в системе не "Master" — жестко выкидываем на страницу входа
     if (!token || localStorage.getItem("role") !== "Master") {
       navigate("/login");
       return;
     }
+
+    // ==========================================
+    // ДОБАВЛЕНО: Принудительный запрос имени мастера с бэкенда .NET Core
+    // ==========================================
+    axios
+      .get(`${baseUrl}/api/Auth/profile`, {
+        // Обязательно шлем токен в заголовках, иначе сервер вернет ошибку 401 Unauthorized
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setMasterProfile(res.data); // Успешно сохраняем JSON профиля (имя, фамилию) в наш стейт
+      })
+      .catch((err) => {
+        console.error("Не удалось подгрузить имя мастера:", err);
+      });
+    // ==========================================
+
+    // Вызываем функции загрузки личного расписания мастера и общих справочников (метаданных)
     fetchSchedule();
     fetchMetadata();
-  }, [navigate, masterId, token]);
+  }, [navigate, masterId, token]); // Хук перезапустится, если изменится токен или ID мастера
 
+  // ФУНКЦИЯ: Успешное завершение бьюти-сеанса (изменение статуса записи)
   const handleComplete = async (id: number) => {
     try {
+      // Отправляем асинхронный PATCH-запрос на специальный эндпоинт Complete бэкенда.
+      // PATCH используется потому, что мы не перезаписываем всю строку, а точечно меняем только одно поле Status = "Completed"
       await axios.patch(
         `${baseUrl}/api/Recordings/Complete/${id}`,
-        {},
+        {}, // Тело запроса пустое, так как ID передается прямо в строке URL
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` }, // Авторизация мастера
         },
       );
+
+      // Выводим красивое всплывающее уведомление об успехе
       message.success("Визит успешно завершен!");
+
+      // Мгновенно перезапрашиваем расписание с сервера, чтобы статус записи на экране сразу сменился
       fetchSchedule();
     } catch {
+      // Если сервер вернул ошибку, выводим предупреждение
       message.error("Не удалось завершить сессию");
     }
   };
@@ -220,32 +250,60 @@ export default function MasterPage() {
     }
   };
 
+  // ФУНКЦИЯ: Создание или редактирование карточки клиента в кабинете мастера
   const handleSaveClient = async (values: any) => {
-    const payload = {
-      id: editingClient ? editingClient.id : 0,
-      name: values.name,
-      surname: values.surname,
-      phone: values.phone,
-    };
-
     try {
+      // 1. ОЧИСТКА НОМЕРА: Вырезаем из телефона скобки, дефисы и буквы
+      const cleanedPhone = values.phone
+        ? values.phone.replace(/\D/g, "")
+        : "Контакты";
+
+      // 2. СИСТЕМНЫЙ МАРКЕР: Получаем ID салона, к которому привязан мастер
+      const activeBusinessId = localStorage.getItem("businessId") || "0";
+
+      // Собираем телефон с невидимым префиксом салона (например, "bId_1_79991234567")
+      const finalPhone =
+        activeBusinessId !== "0"
+          ? `bId_${activeBusinessId}_${cleanedPhone}`
+          : cleanedPhone;
+
+      // 3. ФОРМИРУЕМ PAYLOAD: Синхронизируем имена полей с требованиями C# бэкенда (PascalCase и Notes!)
+      const payload = {
+        Id: editingClient ? editingClient.id : 0, // Передаем ID или 0 для автоинкремента PostgreSQL
+        Name: values.name,
+        Surname: values.surname || "CRM",
+        Notes: finalPhone, // ИСПРАВЛЕНО: Шлем строку с маркером СТРОГО в поле Notes, чтобы бэкенд её увидел!
+        Discount: 0,
+        IsBlocked: false,
+      };
+
+      // 4. ОПЕРАЦИЯ ОБНОВЛЕНИЯ (PUT)
       if (editingClient) {
         await axios.put(`${baseUrl}/api/Clients/${editingClient.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         message.success("Карточка клиента обновлена!");
-      } else {
+      }
+      // 5. ОПЕРАЦИЯ СОЗДАНИЯ (POST)
+      else {
         await axios.post(`${baseUrl}/api/Clients`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        message.success("Новый клиент успешно добавлен в базу!");
+        message.success("Новый клиент успешно добавлен в базу салона!");
       }
+
+      // 6. СБРОС ИНТЕРФЕЙСА
       setIsClientModalOpen(false);
       clientForm.resetFields();
       setEditingClient(null);
-      fetchMetadata();
-    } catch {
-      message.error("Ошибка при работе с базой клиентов");
+
+      // Перезапрашиваем актуальную бьюти-базу с сервера
+      if (typeof fetchMetadata === "function") {
+        fetchMetadata();
+      }
+    } catch (err: any) {
+      console.error("Ошибка сохранения у мастера:", err.response?.data);
+      message.error(err.response?.data || "Ошибка при работе с базой клиентов");
     }
   };
 
@@ -318,10 +376,38 @@ export default function MasterPage() {
       >
         <Space size="middle">
           <CalendarOutlined style={{ fontSize: "22px", color: "#faad14" }} />
-          <Title level={4} style={{ margin: 0, fontWeight: 700 }}>
-            BEAUTY HUB: Журнал Записей Мастера
-          </Title>
+          {/* ИСПРАВЛЕНО: Премиальное бьюти-приветствие с акцентом на имя мастера */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              lineHeight: "1.2",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "12px",
+                color: "#8c8c8c",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                fontWeight: 600,
+              }}
+            >
+              Личный кабинет
+            </span>
+            <Title
+              level={4}
+              style={{ margin: 0, fontWeight: 800, color: "#262626" }}
+            >
+              ✨ Рады видеть вас,{" "}
+              <span style={{ color: "#faad14" }}>
+                {masterProfile?.name || masterProfile?.Name || "Мастер"}
+              </span>
+              !
+            </Title>
+          </div>
         </Space>
+
         <Space size="middle">
           <Button
             type="primary"

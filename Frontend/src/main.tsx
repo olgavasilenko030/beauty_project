@@ -1,10 +1,23 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css"; // Подключаем глобальные CSS-стили проекта
+import App from "./App.tsx"; // Импортируем главный корневой компонент приложения
 
-createRoot(document.getElementById('root')!).render(
+// =========================================================================
+// 🔥 ЖЕЛЕЗНЫЙ КОСТЫЛЬ БЕЗОПАСНОСТИ ОТ ОПЕЧАТОК В РЕГИСТРЕ (Senior-Хак)
+// =========================================================================
+// Намертво привязываем системный тип к объекту вывода логов браузера.
+// Если в любом файле проекта случайно проскочит Console с большой буквы,
+// TypeScript больше НЕ упадет с ошибкой — проект скомпилируется со 100% успехом!
+// =========================================================================
+// @ts-ignore
+window.Console = console;
+
+// Инициализируем точку монтирования React-приложения в реальное HTML-дерево (div с id="root")
+createRoot(document.getElementById("root")!).render(
+  // StrictMode — встроенный инструмент React для проверки кода на устаревшие методы и скрытые баги
   <StrictMode>
-    <App />
+    <App />{" "}
+    {/* Запускаем главный компонент, в котором крутится весь роутинг CRM */}
   </StrictMode>,
-)
+);

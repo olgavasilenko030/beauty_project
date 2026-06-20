@@ -2,48 +2,99 @@ import React, { useEffect, useState } from "react";
 import {
   Layout,
   Card,
+  Typography,
   Form,
   Input,
   Button,
-  Typography,
-  message,
-  Upload,
-  Tag,
-  Spin,
-  Space,
+  Radio,
   DatePicker,
-  Select,
-  Row,
-  Col,
+  message,
+  Space,
 } from "antd";
+import {
+  ArrowLeftOutlined,
+  SaveOutlined,
+  UserOutlined,
+  PhoneOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import dayjs from "dayjs";
-import {
-  LoadingOutlined,
-  PlusOutlined,
-  ArrowLeftOutlined,
-  SaveOutlined,
-  PhoneOutlined,
-} from "@ant-design/icons";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
 export default function SettingsPage() {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(true);
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [loadingAvatar, setLoadingAvatar] = useState(false);
-  const [userRole, setUserRole] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
+  const token = localStorage.getItem("token");
+  const linkedId = localStorage.getItem("linkedId");
   const baseUrl = "https://localhost:7164";
 
-  const handlePhoneInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 1. Метод загрузки текущих данных анкеты клиента с бэкенда
+  const fetchClientProfile = async () => {
+    if (!token || !linkedId) return;
+    try {
+      const res = await axios.get(`${baseUrl}/api/Clients/${linkedId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Заполняем форму Ant Design прилетевшими из PostgreSQL данными
+      form.setFieldsValue({
+        name: res.data.name,
+        surname: res.data.surname,
+        phone: res.data.notes === "Контакты" ? "" : res.data.notes,
+        gender: res.data.gender,
+        dateOfBirth: res.data.dateOfBirth ? dayjs(res.data.dateOfBirth) : null,
+        sourceOfAttraction: res.data.sourceOfAttraction,
+      });
+    } catch (err) {
+      message.error("Не удалось загрузить данные вашего профиля");
+    }
+  };
+
+  useEffect(() => {
+    fetchClientProfile();
+  }, []);
+
+  // 2. Метод отправки обновленной анкеты на бэкенд C# с PascalCase свойствами
+  const handleUpdateProfileSubmit = async (values: any) => {
+    setLoading(true);
+    try {
+      const payload = {
+        Id: parseInt(linkedId || "0", 10),
+        Name: values.name,
+        Surname: values.surname || "CRM",
+        Notes: values.phone || "Контакты",
+        DateOfBirth: values.dateOfBirth
+          ? values.dateOfBirth.format("YYYY-MM-DD")
+          : null,
+        Gender: values.gender,
+        SourceOfAttraction: values.sourceOfAttraction,
+        IsBlocked: false,
+        Discount: 0,
+      };
+
+      await axios.put(`${baseUrl}/api/Clients/${linkedId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      message.success("Данные вашего профиля успешно сохранены!");
+      navigate("/client"); // После сохранения вежливо возвращаем в Личный кабинет
+    } catch (err: any) {
+      message.error(
+        err.response?.data || "Не удалось сохранить изменения профиля",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Посимвольная маска номера телефона для защиты базы от букв
+  const handleClientPhoneChange = (e: any) => {
     let value = e.target.value.replace(/\D/g, "");
+    if (value.length > 11) value = value.substring(0, 11);
     if (value.startsWith("7") || value.startsWith("8"))
       value = value.substring(1);
 
@@ -57,268 +108,104 @@ export default function SettingsPage() {
     form.setFieldsValue({ phone: formattedValue });
   };
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    axios
-      .get(`${baseUrl}/api/Auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        setUserRole(res.data.role || "");
-        setUserEmail(res.data.email || "");
-
-        // ИСПРАВЛЕНО: Таймаут гарантирует, что форма УСПЕЛА смонтироваться в DOM-дереве до записи полей
-        setTimeout(() => {
-          form.setFieldsValue({
-            name: res.data.name,
-            surname: res.data.surname === "CRM" ? "" : res.data.surname,
-            phone: res.data.phone,
-            gender: res.data.gender || undefined,
-            sourceOfAttraction: res.data.sourceOfAttraction || undefined,
-            dateOfBirth: res.data.dateOfBirth
-              ? dayjs(res.data.dateOfBirth)
-              : null,
-          });
-        }, 50);
-
-        if (res.data.avatarUrl) {
-          setAvatarUrl(`${baseUrl}${res.data.avatarUrl}`);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        message.error("Ошибка загрузки профиля");
-        setLoading(false);
-      });
-  }, [token, navigate, form]);
-
-  const handleUpload = (info: any) => {
-    if (info.file.status === "uploading") {
-      setLoadingAvatar(true);
-      return;
-    }
-    if (info.file.status === "done") {
-      const serverPath = info.file.response.url;
-      setAvatarUrl(`${baseUrl}${serverPath}`);
-      setLoadingAvatar(false);
-      message.success("Фото профиля сохранено");
-    } else if (info.file.status === "error") {
-      setLoadingAvatar(false);
-      message.error("Ошибка загрузки файла");
-    }
-  };
-
-  const onFinish = async (values: any) => {
-    try {
-      const dataToSend = {
-        Name: values.name,
-        Surname: values.surname || "CRM",
-        Phone: values.phone,
-        Email: userEmail,
-        Role: userRole,
-        Gender: values.gender,
-        SourceOfAttraction: values.sourceOfAttraction,
-        DateOfBirth: values.dateOfBirth
-          ? values.dateOfBirth.format("YYYY-MM-DD")
-          : null,
-      };
-
-      await axios.put(`${baseUrl}/api/Auth/profile`, dataToSend, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      message.success("Данные успешно обновлены");
-    } catch (error: any) {
-      console.error("Ошибка сохранения:", error.response?.data);
-      message.error(error.response?.data || "Ошибка при сохранении");
-    }
-  };
-
-  if (loading)
-    return (
-      <div style={{ textAlign: "center", marginTop: 100 }}>
-        {/* ИСПРАВЛЕНО: Заменили устаревшее свойство tip на description под новый Ant Design */}
-        <Spin size="large" description="Загрузка профиля..." />
-      </div>
-    );
-
   return (
-    <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
+    <Layout style={{ minHeight: "100vh", background: "#f8fafc" }}>
       <Header
         style={{
           background: "#fff",
-          padding: "0 20px",
+          padding: "0 30px",
           display: "flex",
           alignItems: "center",
-          boxShadow: "0 2px 8px #f0f1f2",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
         }}
       >
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          style={{ marginRight: 16 }}
-        >
-          Назад
-        </Button>
-        <Title level={4} style={{ margin: 0 }}>
-          Настройки профиля
-        </Title>
+        <Space size={14}>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate("/client")}
+            style={{ borderRadius: "8px" }}
+          >
+            Назад в кабинет
+          </Button>
+          <Title level={4} style={{ margin: 0, fontWeight: 800 }}>
+            ⚙️ Настройки личного профиля
+          </Title>
+        </Space>
       </Header>
 
       <Content
-        style={{ padding: "40px", display: "flex", justifyContent: "center" }}
+        style={{
+          padding: "40px",
+          maxWidth: 600,
+          margin: "0 auto",
+          width: "100%",
+        }}
       >
         <Card
           style={{
-            width: 480,
-            borderRadius: 16,
-            boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
+            borderRadius: "16px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginBottom: 20,
-            }}
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleUpdateProfileSubmit}
           >
-            <Upload
-              name="file"
-              listType="picture-circle"
-              className="avatar-uploader"
-              showUploadList={false}
-              action={`${baseUrl}/api/Auth/upload-avatar`}
-              headers={{ Authorization: `Bearer ${token}` }}
-              onChange={handleUpload}
+            <Form.Item
+              name="name"
+              label="Имя"
+              rules={[
+                { required: true, message: "Пожалуйста, введите ваше имя" },
+              ]}
             >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="avatar"
-                  style={{
-                    width: "100%",
-                    borderRadius: "50%",
-                    height: "100%",
-                    objectFit: "cover",
-                  }}
-                />
-              ) : (
-                <div>
-                  {loadingAvatar ? <LoadingOutlined /> : <PlusOutlined />}
-                  <div style={{ marginTop: 8 }}>Фото</div>
-                </div>
-              )}
-            </Upload>
-          </div>
-
-          <div style={{ margin: "15px 0 25px 0", textAlign: "center" }}>
-            {/* ИСПРАВЛЕНО: Заменили компонент Space на чистый CSS Flexbox, чтобы навсегда убрать предупреждение в консоли! */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <Tag
-                color="gold"
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                }}
-              >
-                {userRole === "Client" ? "👑 Клиент" : "✂️ Мастер"}
-              </Tag>
-              <Text type="secondary" strong>
-                {userEmail}
-              </Text>
-            </div>
-          </div>
-          <Form form={form} layout="vertical" onFinish={onFinish}>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="name"
-                  label="Имя"
-                  rules={[{ required: true, message: "Введите имя" }]}
-                >
-                  <Input
-                    size="large"
-                    placeholder="Ваше имя"
-                    style={{ textAlign: "left" }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="surname" label="Фамилия">
-                  <Input
-                    size="large"
-                    placeholder="Ваша фамилия"
-                    style={{ textAlign: "left" }}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item name="phone" label="Номер телефона">
               <Input
+                prefix={<UserOutlined />}
+                placeholder="Ваше имя"
                 size="large"
-                maxLength={18}
-                placeholder="+7 (999) 123-45-67"
-                prefix={<PhoneOutlined style={{ color: "#ef4444" }} />}
-                onChange={handlePhoneInputChange}
-                style={{ textAlign: "left" }}
               />
             </Form.Item>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="dateOfBirth" label="Дата рождения">
-                  <DatePicker
-                    style={{ width: "100%" }}
-                    format="DD.MM.YYYY"
-                    size="large"
-                    placeholder="ДД.ММ.ГГГГ"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="gender" label="Пол">
-                  <Select
-                    placeholder="Выберите пол"
-                    size="large"
-                    style={{ textAlign: "left" }}
-                  >
-                    <Select.Option value="Мужской">👨 Мужской</Select.Option>
-                    <Select.Option value="Женский">👩 Женский</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
+            <Form.Item name="surname" label="Фамилия">
+              <Input placeholder="Ваша фамилия" size="large" />
+            </Form.Item>
+
+            <Form.Item
+              name="phone"
+              label="Номер телефона"
+              rules={[{ required: true, message: "Введите номер телефона" }]}
+            >
+              <Input
+                prefix={<PhoneOutlined />}
+                placeholder="+7 (999) 000-00-00"
+                size="large"
+                onChange={handleClientPhoneChange}
+              />
+            </Form.Item>
+
+            <Form.Item name="gender" label="Ваш пол" initialValue="Женский">
+              <Radio.Group size="large">
+                <Radio value="Мужской">Мужской</Radio>
+                <Radio value="Женский">Женский</Radio>
+              </Radio.Group>
+            </Form.Item>
+
+            <Form.Item name="dateOfBirth" label="Дата рождения">
+              <DatePicker
+                style={{ width: "100%" }}
+                size="large"
+                format="DD.MM.YYYY"
+              />
+            </Form.Item>
 
             <Form.Item
               name="sourceOfAttraction"
-              label="Откуда вы о нас узнали?"
+              label="Откуда вы узнали о нас?"
             >
-              <Select
-                placeholder="Выберите источник рекламы"
+              <Input
+                placeholder="Например: Инстаграм, Друзья, Реклама"
                 size="large"
-                style={{ textAlign: "left" }}
-              >
-                <Select.Option value="VK">🌐 ВКонтакте</Select.Option>
-                <Select.Option value="Instagram">📸 Instagram</Select.Option>
-                <Select.Option value="Рекомендация">
-                  🤝 Рекомендация друзей
-                </Select.Option>
-                <Select.Option value="Вывеска">
-                  ✨ Проходил мимо / Вывеска
-                </Select.Option>
-              </Select>
+              />
             </Form.Item>
 
             <Button
@@ -326,17 +213,18 @@ export default function SettingsPage() {
               htmlType="submit"
               block
               size="large"
+              loading={loading}
               icon={<SaveOutlined />}
               style={{
                 background: "#faad14",
-                border: "none",
-                marginTop: 15,
-                height: 48,
+                borderColor: "#faad14",
                 fontWeight: 700,
-                borderRadius: 12,
+                marginTop: 10,
+                height: 45,
+                borderRadius: "8px",
               }}
             >
-              Сохранить изменения
+              Сохранить изменения профиля
             </Button>
           </Form>
         </Card>

@@ -81,7 +81,28 @@ export default function LoginPage() {
       } else if (userRole === "Master") {
         navigate("/master");
       } else {
-        navigate("/client");
+        // ==========================================
+        // ИСПРАВЛЕНО: Умный подхват выбранного мастера после авторизации клиента
+        // ==========================================
+        const autoBusinessId = sessionStorage.getItem("autoBusinessId");
+        const autoMasterId = sessionStorage.getItem("autoMasterId");
+
+        if (autoBusinessId && autoMasterId) {
+          // Очищаем временную сессию, чтобы авто-открытие сработало строго один раз
+          sessionStorage.removeItem("autoBusinessId");
+          sessionStorage.removeItem("autoMasterId");
+
+          // Перенаправляем в ЛК, прокидывая ID мастера во внутреннее состояние роутера
+          navigate("/client", {
+            state: {
+              autoBusinessId: parseInt(autoBusinessId, 10),
+              autoMasterId: parseInt(autoMasterId, 10),
+            },
+          });
+        } else {
+          // Обычный вход без предварительного выбора мастера
+          navigate("/client");
+        }
       }
     } catch (err) {
       message.error("Ошибка входа. Проверьте ваш логин и пароль.");

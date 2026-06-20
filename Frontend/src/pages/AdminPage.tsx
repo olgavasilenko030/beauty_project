@@ -620,49 +620,73 @@ export default function AdminPage() {
     }
   };
 
+  // ФУНКЦИЯ: Сохранение карточки клиента в базу данных при сабмите формы
   const handleSaveClient = async (values: any) => {
     try {
-      // 1. ИСПРАВЛЕНО: Привели поля к PascalCase и записали телефон в Notes под структуру твоей БД!
+      // 1. ОЧИСТКА ДАННЫХ: Вырезаем из телефона скобки, дефисы и случайные буквы!
+      // Оставляем строго чистые цифры (например: 79991234567)
+      const cleanedPhone = values.phone
+        ? values.phone.replace(/\D/g, "")
+        : "Контакты";
+
+      // 2. СИСТЕМНЫЙ МАРКЕР САЛОНА: Извлекаем Идентификатор текущего салона из памяти браузера.
+      // Если его там нет, ставим дефолтное значение "0".
+      const activeBusinessId = localStorage.getItem("businessId") || "0";
+
+      // Формируем тело запроса (Payload) в формате PascalCase для бэкенда C#
       const payload = {
-        Id: 0,
-        Name: values.name,
-        Surname: values.surname || "CRM",
-        Notes: values.phone || "Контакты", // Телефон шлем строго в Notes!
-        Discount: 0,
-        IsBlocked: false,
+        Id: 0, // Передаем 0, так как PostgreSQL сама сгенерирует уникальный Id (Автоинкремент)
+        Name: values.name, // Имя клиента из текстового поля формы
+        Surname: values.surname || "CRM", // Фамилия (если пустая — ставим заглушку "CRM")
+
+        // ИСПРАВЛЕНО: Зашиваем невидимый маркер салона прямо в поле заметок Notes!
+        // Вместо сырого "79991234567" в базу улетит сочная строка, например: "bId_1_79991234567"
+        // Это позволит серверу в методе GetClients мгновенно привязать клиента к нашему салону!
+        Notes:
+          activeBusinessId !== "0"
+            ? `bId_${activeBusinessId}_${cleanedPhone}`
+            : cleanedPhone,
+
+        Discount: 0, // Стартовая персональная скидка бьюти-гостя
+        IsBlocked: false, // По умолчанию клиент активен (не заблокирован)
       };
 
-      // Шлем POST-запрос на бэкенд .NET Core для создания карточки в PostgreSQL
+      // 3. ЗАПРОС К API: Отправляем асинхронный POST-запрос на бэкенд .NET Core для создания записи в БД
+      // Обязательно передаем токен в Headers для успешного прохождения проверки [Authorize]
       const res = await axios.post(`${baseUrl}/api/Clients`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Получаем чистый объект созданного клиента с его реальным Id из базы данных
+      // Получаем от бэкенда готовый объект клиента, которому база уже присвоила реальный Id
       const createdClient = res.data;
 
+      // Выводим красивое уведомление об успехе, закрываем модалку и сбрасываем поля формы
       message.success("Новый клиент успешно добавлен!");
       setIsClientModalOpen(false);
       clientForm.resetFields();
 
-      // 2. ИСПРАВЛЕНО: Мгновенно подмешиваем созданного клиента в стейт локально!
-      // Это решает проблему INNER JOIN: клиент СРАЗУ появится в выпадающем списке выбора,
-      // и администратор сможет моментально создать для него реальный визит!
+      // 4. UX-ОПТИМИЗАЦИЯ (Локальное обновление интерфейса):
+      // Создаем объект клиента в формате camelCase, к которому привык React-фронтенд.
+      // ВАЖНО: В поле notes локально на экран выводим ЧИСТЫЙ ТЕЛЕФОН без технических маркеров bId!
       const clientWithEmail = {
-        id: createdClient.id || createdClient.Id,
+        id: createdClient.id || createdClient.Id, // Подхватываем Id в любом регистре букв
         name: values.name,
         surname: values.surname || "CRM",
-        notes: values.phone || "Контакты",
+        notes: cleanedPhone, // Записываем чистый телефон для красивого отображения в таблице
         isBlocked: false,
         email: "Локальный контакт",
       };
 
+      // Мгновенно подмешиваем нового клиента в начало стейта (массива на экране)
+      // Благодаря этому администратору НЕ нужно обновлять страницу — клиент СРАЗУ появится в выпадающем списке!
       setClients((prev) => [clientWithEmail, ...prev]);
 
-      // Обновляем общие справочники и счетчики на панели аналитики
+      // Пересчитываем общие счетчики на панели бизнес-аналитики (Количество клиентов, Retention Rate)
       if (typeof fetchSalonAnalytics === "function") {
         fetchSalonAnalytics();
       }
     } catch (err: any) {
+      // Если бэкенд вернул ошибку валидации, выводим её текст пользователю
       message.error(err.response?.data || "Ошибка создания клиента");
     }
   };
@@ -1557,15 +1581,38 @@ export default function AdminPage() {
                         <Input placeholder="Должность" />
                       </Form.Item>
 
-                      {/* ДОБАВЛЕНО: Поле ввода телефона мастера с живой маской */}
-                      <Form.Item name="phone">
+                      {/* ИСПРАВЛЕНО ДЛЯ АДМИНКИ: Жесткая блокировка букв при сохранении карточки клиента из базы! */}
+                      <Form.Item
+                        name="phone"
+                        label="Номер телефона"
+                        rules={[
+                          { required: true, message: "Введите номер телефона" },
+                          {
+                            validator: (_, value) => {
+                              if (!value) return Promise.resolve();
+
+                              // Регулярное выражение: проверяет, что в строке ТОЛЬКО цифры и знаки маски
+                              const phoneRegex =
+                                /^\+7\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$/;
+
+                              if (!phoneRegex.test(value)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Неверный формат! Номер не должен содержать буквы и должен быть заполнен до конца.",
+                                  ),
+                                );
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
+                      >
                         <Input
-                          placeholder="Телефон мастера"
+                          size="large"
                           maxLength={18}
-                          style={{ width: 180 }}
-                          onChange={(e) =>
-                            handlePhoneInputChange(e, employeeForm, "phone")
-                          }
+                          type="tel"
+                          placeholder="+7 (999) 123-45-67"
+                          style={{ textAlign: "left" }}
                         />
                       </Form.Item>
 

@@ -21,17 +21,17 @@ namespace Beauty.Controllers
             _context = context;
         }
 
-        // --- УМНЫЙ ИБЕЗОПАСНЫЙ GET С ФИЛЬТРАЦИЕЙ КЛИЕНТОВ САЛОНА ---
-        // GET: api/Clients или api/Clients?businessId=1
+        // --- УМНЫЙ И БЕЗОПАСНЫЙ GET С ФИЛЬТРАЦИЕЙ КЛИЕНТОВ САЛОНА ---
+        // GET: api/Clients?businessId=1
         [HttpGet]
-        [Authorize]
+        [Authorize] // Защита эндпоинта JWT Bearer токеном
         public async Task<IActionResult> GetClients([FromQuery] int businessId)
         {
             if (businessId == 0) return BadRequest("Идентификатор бизнеса не указан.");
 
             try
             {
-                // 1. Находим ID всех клиентов, у которых есть визиты в этот конкретный салон
+                // 1. Находим ID всех клиентов, у которых уже есть реальные бьюти-визиты в этот конкретный салон
                 var clientIdsInBusiness = await (from r in _context.Recordings
                                                  join e in _context.Emploees on r.EmploeeId equals e.Id
                                                  where e.BusinessId == businessId && r.ClientId.HasValue
@@ -39,36 +39,49 @@ namespace Beauty.Controllers
                                                  .Distinct()
                                                  .ToListAsync();
 
-                // 2. ИСПРАВЛЕНО: Скачиваем клиентов из таблицы public.client.
-                // Вытаскиваем тех, у кого есть визиты, ИЛИ новых "ручных" клиентов салона (у них Фамилия == "CRM")
+                // КЛЮЧЕВОЙ МАРКЕР: Формируем текстовую метку нашего салона для поиска "ручных" клиентов без записей
+                string businessTag = $"bId_{businessId}_";
+
+                // 2. ИСПРАВЛЕНО: Скачиваем клиентов из PostgreSQL.
+                // Вытаскиваем тех, у кого есть визиты, ИЛИ у кого в поле Notes зашит маркер этого салона, ИЛИ фамилия "CRM"
                 var dbClients = await _context.Clients
                     .AsNoTracking()
-                    .Where(c => clientIdsInBusiness.Contains(c.Id) || c.Surname == "CRM")
+                    .Where(c => clientIdsInBusiness.Contains(c.Id) ||
+                                c.Surname == "CRM" ||
+                                (c.Notes != null && c.Notes.StartsWith(businessTag)))
                     .ToListAsync();
 
-                // 3. Если в базе вообще пусто, отдаем пустой массив, чтобы фронтенд не падал
                 if (!dbClients.Any())
                 {
                     return Ok(new List<object>());
                 }
 
-                // 4. Формируем расширенный JSON-ответ, безопасно форматируя даты в памяти C# (.AsEnumerable)
-                var filteredClients = dbClients.AsEnumerable().Select(c => new
-                {
-                    c.Id,
-                    c.Name,
-                    c.Surname,
-                    c.IsBlocked,
-                    c.Notes, // Твой телефон/контакты
-                    c.Gender,
-                    c.Discount,
-                    c.SourceOfAttraction,
-                    DateOfBirth = c.DateOfBirth?.ToString("yyyy-MM-dd"),
+                // 3. Формируем расширенный JSON-ответ, безопасно форматируя данные в оперативной памяти сервера (.AsEnumerable)
+                var filteredClients = dbClients.AsEnumerable().Select(c => {
+                    // Если у клиента в телефоне зашит наш системный маркер салона, красиво очищаем его перед отправкой на экран
+                    string displayPhone = c.Notes ?? "Контакты";
+                    if (displayPhone.StartsWith(businessTag))
+                    {
+                        displayPhone = displayPhone.Replace(businessTag, ""); // Срезаем bId_1_, оставляя чистый телефон гостя!
+                    }
 
-                    Email = _context.Users
-                        .Where(u => u.Role == "Client" && u.LinkedId == c.Id)
-                        .Select(u => u.Email)
-                        .FirstOrDefault() ?? "Email не привязан"
+                    return new
+                    {
+                        c.Id,
+                        c.Name,
+                        c.Surname,
+                        c.IsBlocked,
+                        Notes = displayPhone, // На фронтенд React улетает чистый, красивый номер телефона!
+                        c.Gender,
+                        c.Discount,
+                        c.SourceOfAttraction,
+                        DateOfBirth = c.DateOfBirth?.ToString("yyyy-MM-dd"),
+
+                        Email = _context.Users
+                            .Where(u => u.Role == "Client" && u.LinkedId == c.Id)
+                            .Select(u => u.Email)
+                            .FirstOrDefault() ?? "Email не привязан"
+                    };
                 }).ToList();
 
                 return Ok(filteredClients);
@@ -79,6 +92,7 @@ namespace Beauty.Controllers
                 return StatusCode(500, "Внутренняя ошибка сервера при фильтрации базы клиентов: " + ex.Message);
             }
         }
+
 
 
 
@@ -155,14 +169,61 @@ namespace Beauty.Controllers
         }
 
 
-        // PUT: api/Clients/5
+        // МЕТОД (POST): Создание карточки нового клиента
+        // URL: api/Clients
+        [HttpPost]
+        [Authorize]
+        public async Task<ActionResult<Client>> PostClient(Client client)
+        {
+            // БЭКЕНД-ВАЛИДАЦИЯ ТЕЛЕФОНА: Вырезаем маркер салона bId_..._ для проверки реального номера
+            string realPhone = client.Notes ?? "";
+            if (realPhone.StartsWith("bId_"))
+            {
+                // Отрезаем маркер, чтобы проверить только чистый номер телефона
+                int secondUnderscore = realPhone.IndexOf('_', 4);
+                if (secondUnderscore != -1)
+                {
+                    realPhone = realPhone.Substring(secondUnderscore + 1);
+                }
+            }
+
+            // КРИТИЧЕСКИЙ ДЕФЕНС: Если в номере телефона осталась хоть одна БУКВА, жестко рубим запрос!
+            if (System.Text.RegularExpressions.Regex.IsMatch(realPhone, @"[a-zA-Zа-яА-Я]"))
+            {
+                return BadRequest("Ошибка валидации сервера: Номер телефона не должен содержать буквы!");
+            }
+
+            // Если номер пустой после очистки фронтенда, тоже блокируем запись
+            if (string.IsNullOrWhiteSpace(realPhone) || realPhone == "Контакты")
+            {
+                return BadRequest("Ошибка валидации сервера: Номер телефона обязателен для заполнения!");
+            }
+
+            _context.Clients.Add(client);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetClient), new { id = client.Id }, client);
+        }
+
+        // МЕТОД (PUT): Редактирование существующей карточки клиента
+        // URL: api/Clients/5
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> PutClient(int id, Client client)
         {
-            if (id != client.Id)
+            if (id != client.Id) return BadRequest("Идентификатор не совпадает.");
+
+            // БЭКЕНД-ВАЛИДАЦИЯ ПРИ ОБНОВЛЕНИИ КАРТОЧКИ: Защита от ручного ввода букв при редактировании
+            string realPhone = client.Notes ?? "";
+            if (realPhone.StartsWith("bId_"))
             {
-                return BadRequest("Идентификатор клиента не совпадает.");
+                int secondUnderscore = realPhone.IndexOf('_', 4);
+                if (secondUnderscore != -1) realPhone = realPhone.Substring(secondUnderscore + 1);
+            }
+
+            if (System.Text.RegularExpressions.Regex.IsMatch(realPhone, @"[a-zA-Zа-яА-Я]"))
+            {
+                return BadRequest("Ошибка валидации сервера: Запрещено сохранять буквы в номере телефона!");
             }
 
             _context.Entry(client).State = EntityState.Modified;
@@ -173,53 +234,14 @@ namespace Beauty.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ClientExists(id))
-                {
-                    return NotFound("Данные клиента для обновления не найдены.");
-                }
-                else
-                {
-                    throw;
-                }
+                if (!_context.Clients.Any(e => e.Id == id)) return NotFound();
+                throw;
             }
 
             return NoContent();
         }
 
-        // POST: api/Clients
-        [HttpPost]
-        [Authorize]
-        public async Task<ActionResult<Client>> PostClient(Client client)
-        {
-            _context.Clients.Add(client);
-            await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetClient), new { id = client.Id }, client);
-        }
-
-        // DELETE: api/Clients/5
-        [HttpDelete("{id}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteClient(int id)
-        {
-            var client = await _context.Clients.FindAsync(id);
-            if (client == null)
-            {
-                return NotFound("Клиент для удаления не найден.");
-            }
-
-            // ПРОВЕРКА ЦЕЛОСТНОСТИ: Блокируем удаление, если за клиентом закреплены сеансы
-            bool hasRecordings = await _context.Recordings.AnyAsync(r => r.ClientId == id);
-            if (hasRecordings)
-            {
-                return BadRequest("Невозможно удалить карточку клиента, так как в базе данных зафиксирована история его записей.");
-            }
-
-            _context.Clients.Remove(client);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
 
         private bool ClientExists(int id)
         {

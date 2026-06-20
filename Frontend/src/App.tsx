@@ -11,7 +11,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/beauty_project">
       <Routes>
         {/* Общая точка входа */}
         <Route path="/" element={<HomePage />} />

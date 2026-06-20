@@ -72,6 +72,8 @@ export default function HomePage() {
   const [topMasters, setTopMasters] = useState<Master[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [allServices, setAllServices] = useState<any[]>([]); // ОБЪЯВЛЯЕМ массив всех услуг для фильтрации
+
   const token = localStorage.getItem("token");
   const baseUrl = "https://localhost:7164";
   const [ads, setAds] = useState<any[]>([]);
@@ -99,6 +101,12 @@ export default function HomePage() {
       } finally {
         setLoading(false);
       }
+      axios
+        .get("https://localhost:7164/api/Services")
+        .then((res) => setAllServices(res.data || []))
+        .catch((err) =>
+          console.error("Ошибка предзагрузки услуг на главной:", err),
+        );
     };
 
     fetchHomeData();
@@ -464,13 +472,44 @@ export default function HomePage() {
                 gutter={[32, 32]}
                 style={{ maxWidth: 1400, margin: "0 auto" }}
               >
+                {/* ДИНАМИЧЕСКИЙ РЕНДЕРИНГ СЕТКИ КАТЕГОРИЙ ИЗ МАССИВА categories */}
                 {categories.map((cat, index) => (
                   <Col xs={24} sm={12} md={12} lg={8} key={index}>
                     <Card
                       hoverable
                       onClick={() => {
-                        const param = (cat as any).id || cat.name;
-                        navigate(`/salons?category=${param}`);
+                        let searchWord = cat.name.toLowerCase();
+
+                        // ==========================================
+                        // ИСПРАВЛЕНО: Чистая и надежная логика переходов без мусора allServices!
+                        // ==========================================
+                        let serviceIdForSession = "1"; // Дефолтный ID услуги (например, стрижка)
+
+                        if (searchWord.includes("барбершоп")) {
+                          searchWord = "barber";
+                          serviceIdForSession = "5"; // Бритьё / Борода
+                        } else if (searchWord.includes("пилк")) {
+                          searchWord = "маник";
+                          serviceIdForSession = "2"; // Маникюр
+                        } else if (searchWord.includes("парикмахер")) {
+                          searchWord = "стриж";
+                          serviceIdForSession = "1"; // Стрижка
+                        } else if (searchWord.includes("массаж")) {
+                          searchWord = "массаж";
+                          serviceIdForSession = "3";
+                        } else if (searchWord.includes("брови")) {
+                          searchWord = "бров";
+                          serviceIdForSession = "4";
+                        }
+
+                        // Сохраняем ID услуги в память сессии браузера, чтобы ЛК клиента подхватил её при записи
+                        sessionStorage.setItem(
+                          "autoServiceId",
+                          serviceIdForSession,
+                        );
+
+                        // Переходим на страницу каталога салонов с идеально точным Query-параметром!
+                        navigate(`/salons?category=${searchWord}`);
                       }}
                       cover={
                         <img
@@ -511,7 +550,7 @@ export default function HomePage() {
                 ))}
               </Row>
             </div>
-            {/* Раздел лучших мастеров */}
+            {/* РАЗДЕЛ ЛУЧШИХ МАСТЕРОВ НЕДЕЛИ НА ГЛАВНОЙ СТРАНИЦЕ */}
             <div style={{ padding: "60px 40px" }}>
               <Title
                 level={3}
@@ -524,6 +563,7 @@ export default function HomePage() {
               </Title>
 
               <Row gutter={[24, 24]}>
+                {/* УСЛОВНЫЙ РЕНДЕРИНГ: Если стейт loading равен true — выводим три карточки-скелетона (заглушки) */}
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <Col xs={24} sm={12} md={8} key={i}>
@@ -538,6 +578,7 @@ export default function HomePage() {
                     </Text>
                   </Col>
                 ) : (
+                  // Сортируем мастеров по убыванию рейтинга звезд и берем ТОП-3 для вывода
                   topMasters
                     .sort((a: any, b: any) => (b.rating || 5) - (a.rating || 5))
                     .slice(0, 3)
@@ -549,20 +590,9 @@ export default function HomePage() {
                             borderRadius: "12px",
                             overflow: "hidden",
                             boxShadow: "0 6px 16px rgba(0,0,0,0.04)",
+                            padding: "24px 16px 16px 16px", // Мягкие внутренние отступы карточки
                           }}
-                          actions={[
-                            <Button
-                              type="link"
-                              onClick={handleBookingClick}
-                              style={{
-                                color: "#faad14",
-                                fontWeight: 700,
-                                fontSize: "15px",
-                              }}
-                            >
-                              Выбрать услуги и время
-                            </Button>,
-                          ]}
+                          // ИСПРАВЛЕНО: Убрали actions, чтобы Ant Design не блокировал клики на кнопку!
                         >
                           <Card.Meta
                             avatar={
@@ -626,6 +656,60 @@ export default function HomePage() {
                               </Space>
                             }
                           />
+                          {/* ========================================================================= */}
+                          {/* АКЦЕНТНАЯ КНОПКА ЗАПИСИ (ВШИТА ВНУТРЬ ТЕЛА КАРТОЧКИ)                       */}
+                          {/* ========================================================================= */}
+                          <div
+                            style={{ textAlign: "center", marginTop: "24px" }}
+                          >
+                            <Button
+                              type="primary"
+                              // Жесткий перехват клика с остановкой всплытия события!
+                              onClick={(e) => {
+                                e.stopPropagation(); // Блокирует ложные срабатывания родительских тегов Card
+
+                                const userToken = localStorage.getItem("token");
+
+                                // Вытаскиваем ID строго по маленьким буквам, как просит TypeScript
+                                const bId = master.businessId
+                                  ? String(master.businessId)
+                                  : "0";
+                                const mId = master.id ? String(master.id) : "0";
+
+                                // Записываем ID в оперативную память сессии браузера (Бьюти-Сессия)
+                                sessionStorage.setItem("autoBusinessId", bId);
+                                sessionStorage.setItem("autoMasterId", mId);
+
+                                // Если гость НЕ авторизован — шлем на Логин
+                                if (!userToken) {
+                                  message.info(
+                                    "Для онлайн-записи, пожалуйста, авторизуйтесь в системе",
+                                  );
+                                  navigate("/login");
+                                } else {
+                                  // Если уже залогинен — перекидываем в Личный кабинет, пробрасывая стейт
+                                  navigate("/client", {
+                                    state: {
+                                      autoBusinessId: parseInt(bId, 10),
+                                      autoMasterId: parseInt(mId, 10),
+                                    },
+                                  });
+                                }
+                              }}
+                              style={{
+                                background: "#faad14", // Наш фирменный золотой цвет
+                                borderColor: "#faad14",
+                                fontWeight: 700,
+                                fontSize: "14px",
+                                borderRadius: "8px",
+                                width: "100%",
+                                height: "38px",
+                                boxShadow: "0 4px 10px rgba(250,173,20,0.15)",
+                              }}
+                            >
+                              Выбрать услуги и время
+                            </Button>
+                          </div>
                         </Card>
                       </Col>
                     ))
